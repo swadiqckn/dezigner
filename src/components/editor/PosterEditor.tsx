@@ -26,12 +26,18 @@ export default function PosterEditor() {
   // 1. Initial responsive zoom calculation
   useEffect(() => {
     resetZoomPan();
+    const timer = setTimeout(() => {
+      resetZoomPan();
+    }, 100);
+
     const handleResize = () => {
-      // Auto adjust zoom on window resize if not customized
       resetZoomPan();
     };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', handleResize);
+    };
   }, [resetZoomPan]);
 
   // 2. Check for URL parameters (?config=... or ?institution=...) on mount

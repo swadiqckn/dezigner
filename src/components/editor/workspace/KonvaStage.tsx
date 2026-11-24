@@ -286,20 +286,30 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
   };
 
   return (
-    <div className="relative inline-block select-none shadow-2xl rounded-sm">
-      <Stage
-        ref={stageRef}
-        width={width}
-        height={height}
+    <div
+      className="relative select-none shadow-2xl rounded-sm transition-all duration-75 shrink-0"
+      style={{
+        width: `${Math.round(width * zoom)}px`,
+        height: `${Math.round(height * zoom)}px`,
+        transform: `translate(${pan.x}px, ${pan.y}px)`,
+      }}
+    >
+      <div
         style={{
-          transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`,
+          width: `${width}px`,
+          height: `${height}px`,
+          transform: `scale(${zoom})`,
           transformOrigin: 'top left',
-          transition: 'transform 0.05s ease-out',
         }}
-        onClick={handleStageClick}
-        onTap={handleStageClick}
       >
-        <Layer ref={layerRef}>
+        <Stage
+          ref={stageRef}
+          width={width}
+          height={height}
+          onClick={handleStageClick}
+          onTap={handleStageClick}
+        >
+          <Layer ref={layerRef}>
           {/* Background Canvas Node */}
           {background.type === 'gradient' && background.gradient ? (
             <Rect
@@ -391,6 +401,7 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
           />
         </Layer>
       </Stage>
+    </div>
 
       {/* Inline Text Quick Editor Overlay */}
       {editingTextId && editingTextPos && (
@@ -400,7 +411,6 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
             left: `${editingTextPos.x * zoom}px`,
             top: `${editingTextPos.y * zoom}px`,
             width: `${editingTextPos.width * zoom}px`,
-            transform: `translate(${pan.x * zoom}px, ${pan.y * zoom}px)`,
             zIndex: 100,
           }}
         >

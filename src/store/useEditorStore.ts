@@ -201,6 +201,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     setCanvasSize: (width, height, presetName = "Custom") => {
       pushSnapshot();
       set({ width, height, presetName });
+      get().resetZoomPan();
     },
 
     setCanvasBackground: (background) => {
