@@ -442,8 +442,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
       let availH = 650;
       if (typeof window !== 'undefined') {
         const isMobile = window.innerWidth < 768;
-        availW = isMobile ? window.innerWidth - 32 : Math.max(300, window.innerWidth - 500);
-        availH = isMobile ? window.innerHeight - 200 : Math.max(300, window.innerHeight - 150);
+        availW = isMobile ? window.innerWidth - 24 : Math.max(300, window.innerWidth - 500);
+        availH = isMobile ? Math.max(220, window.innerHeight * 0.44) : Math.max(300, window.innerHeight - 150);
       }
       const fitZoom = Math.min(availW / width, availH / height, 0.75);
       set({ zoom: Math.max(0.1, Number(fitZoom.toFixed(2))), pan: { x: 0, y: 0 } });

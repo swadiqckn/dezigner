@@ -222,8 +222,8 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
         </div>
       )}
 
-      {/* Main Canvas Scroll Area */}
-      <div className="relative flex-1 w-full h-full flex items-center justify-center p-2 sm:p-4 md:p-8 overflow-hidden">
+      {/* Main Canvas Scroll Area (Top-aligned on mobile so bottom space remains open for sheets) */}
+      <div className="relative flex-1 w-full h-full flex items-start justify-center pt-3 pb-2 px-2 sm:items-center sm:p-4 md:p-8 overflow-hidden">
         <KonvaStageDynamic onStageReady={onStageReady} />
       </div>
 

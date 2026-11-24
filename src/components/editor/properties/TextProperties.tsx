@@ -4,7 +4,7 @@ import React from 'react';
 import { TextLayer } from '@/types/editor';
 import { useEditorStore } from '@/store/useEditorStore';
 import { POPULAR_FONTS } from '@/constants/fonts';
-import { COLOR_PALETTES } from '@/constants/elements';
+import ColorPickerSection from './ColorPickerSection';
 import { 
   Bold, 
   Italic, 
@@ -72,38 +72,58 @@ export default function TextProperties({ layer }: TextPropertiesProps) {
         </select>
       </div>
 
-      {/* Font Size & Weight / Styling Row */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-            Size (px)
-          </label>
+      {/* Font Size with Slider Control */}
+      <div className="space-y-1.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-semibold text-slate-700">Size (px)</label>
           <input
             type="number"
             min={8}
             max={300}
             value={layer.fontSize}
             onChange={(e) => handleUpdate({ fontSize: Number(e.target.value) || 12 })}
-            className="w-full text-xs font-semibold text-slate-900 p-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-600 outline-none"
+            className="w-16 text-xs font-semibold text-slate-900 px-2 py-1 bg-white border border-slate-200 rounded-lg text-right outline-none focus:border-purple-600"
           />
         </div>
+        <input
+          type="range"
+          min={10}
+          max={200}
+          step={1}
+          value={layer.fontSize}
+          onChange={(e) => handleUpdate({ fontSize: Number(e.target.value) || 12 })}
+          className="w-full accent-purple-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
+        />
+      </div>
 
-        <div>
-          <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-            Rotation (°)
+      {/* Rotation with Slider Control */}
+      <div className="space-y-1.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+            <RotateCw className="w-3.5 h-3.5 text-slate-500" />
+            <span>Rotation</span>
           </label>
-          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5">
-            <RotateCw className="w-3.5 h-3.5 text-slate-400" />
+          <div className="flex items-center gap-1">
             <input
               type="number"
-              min={-360}
-              max={360}
+              min={-180}
+              max={180}
               value={layer.rotation || 0}
               onChange={(e) => handleUpdate({ rotation: Number(e.target.value) || 0 })}
-              className="w-full text-xs font-semibold text-slate-900 bg-transparent outline-none"
+              className="w-16 text-xs font-semibold text-slate-900 px-2 py-1 bg-white border border-slate-200 rounded-lg text-right outline-none focus:border-purple-600"
             />
+            <span className="text-xs text-slate-400">°</span>
           </div>
         </div>
+        <input
+          type="range"
+          min={-180}
+          max={180}
+          step={1}
+          value={layer.rotation || 0}
+          onChange={(e) => handleUpdate({ rotation: Number(e.target.value) || 0 })}
+          className="w-full accent-purple-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
+        />
       </div>
 
       {/* Style Buttons (Bold, Italic, Underline, Uppercase) */}
@@ -223,39 +243,12 @@ export default function TextProperties({ layer }: TextPropertiesProps) {
         </div>
       </div>
 
-      {/* Text Color Swatches */}
-      <div>
-        <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-          Text Color
-        </label>
-        <div className="flex items-center gap-2 mb-2">
-          <input
-            type="color"
-            value={layer.color || '#000000'}
-            onChange={(e) => handleUpdate({ color: e.target.value })}
-            className="w-8 h-8 rounded-lg cursor-pointer border border-slate-300 p-0.5"
-          />
-          <input
-            type="text"
-            value={layer.color || '#000000'}
-            onChange={(e) => handleUpdate({ color: e.target.value })}
-            className="flex-1 text-xs font-semibold text-slate-900 p-2 bg-slate-50 border border-slate-200 rounded-xl font-mono uppercase focus:bg-white focus:border-purple-600 outline-none"
-          />
-        </div>
-
-        {/* Quick Color Swatches */}
-        <div className="flex flex-wrap gap-1.5">
-          {COLOR_PALETTES[0].colors.concat(COLOR_PALETTES[1].colors.slice(0, 3)).map((c, i) => (
-            <button
-              key={`${c}-${i}`}
-              onClick={() => handleUpdate({ color: c })}
-              style={{ backgroundColor: c }}
-              className="w-6 h-6 rounded-md border border-slate-300 hover:scale-110 transition-transform shadow-xs"
-              title={c}
-            />
-          ))}
-        </div>
-      </div>
+      {/* Text Color Picker & Used Colors */}
+      <ColorPickerSection
+        label="Text Color"
+        value={layer.color || '#000000'}
+        onChange={(color) => handleUpdate({ color })}
+      />
 
       {/* Shadow & Effects */}
       <div className="space-y-3 bg-slate-50/80 p-3 rounded-xl border border-slate-200">

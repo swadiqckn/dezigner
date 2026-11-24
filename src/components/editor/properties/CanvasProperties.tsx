@@ -3,8 +3,8 @@
 import React from 'react';
 import { useEditorStore } from '@/store/useEditorStore';
 import { CANVAS_PRESETS } from '@/constants/canvasPresets';
-import { GRADIENT_PRESETS, COLOR_PALETTES } from '@/constants/elements';
-import { Layout, Palette, Sparkles } from 'lucide-react';
+import ColorPickerSection from './ColorPickerSection';
+import { Layout } from 'lucide-react';
 
 export default function CanvasProperties() {
   const {
@@ -70,67 +70,13 @@ export default function CanvasProperties() {
         </div>
       </div>
 
-      {/* Background Color / Gradient */}
-      <div className="space-y-3 pt-3 border-t border-slate-200">
-        <label className="text-xs font-semibold text-slate-700 block">
-          Canvas Background
-        </label>
-
-        {/* Solid Color Picker */}
-        <div className="flex items-center gap-2">
-          <input
-            type="color"
-            value={background.color || '#FFFFFF'}
-            onChange={(e) => setCanvasBackground({ type: 'solid', color: e.target.value })}
-            className="w-8 h-8 rounded-lg cursor-pointer border border-slate-300 p-0.5"
-          />
-          <input
-            type="text"
-            value={background.color || '#FFFFFF'}
-            onChange={(e) => setCanvasBackground({ type: 'solid', color: e.target.value })}
-            className="flex-1 text-xs p-2 bg-slate-50 border border-slate-200 rounded-xl font-mono uppercase focus:bg-white outline-none"
-          />
-        </div>
-
-        {/* Solid Color Presets */}
-        <div>
-          <span className="text-[11px] text-slate-400 block mb-1.5">Classic Solids</span>
-          <div className="flex flex-wrap gap-1.5">
-            {['#FFFFFF', '#F8FAFC', '#F1F5F9', '#0F172A', '#09090B', '#39216C', '#064E3B', '#881337', '#78350F'].map(
-              (c) => (
-                <button
-                  key={c}
-                  onClick={() => setCanvasBackground({ type: 'solid', color: c })}
-                  style={{ backgroundColor: c }}
-                  className="w-6 h-6 rounded-md border border-slate-300 hover:scale-110 transition-transform shadow-xs"
-                  title={c}
-                />
-              )
-            )}
-          </div>
-        </div>
-
-        {/* Designer Gradients */}
-        <div>
-          <span className="text-[11px] text-slate-400 block mb-1.5">Designer Gradients</span>
-          <div className="grid grid-cols-4 gap-2">
-            {GRADIENT_PRESETS.map((grad) => (
-              <button
-                key={grad.name}
-                onClick={() =>
-                  setCanvasBackground({
-                    type: 'gradient',
-                    color: grad.config.stops[0].color,
-                    gradient: grad.config,
-                  })
-                }
-                style={{ background: grad.value }}
-                className="h-10 rounded-lg border border-slate-200 shadow-xs hover:ring-2 hover:ring-purple-500 transition-all"
-                title={grad.name}
-              />
-            ))}
-          </div>
-        </div>
+      {/* Background Color & Used Colors */}
+      <div className="pt-3 border-t border-slate-200">
+        <ColorPickerSection
+          label="Background Color"
+          value={background.color || '#FFFFFF'}
+          onChange={(color) => setCanvasBackground({ type: 'solid', color })}
+        />
       </div>
     </div>
   );

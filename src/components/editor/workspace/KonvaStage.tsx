@@ -397,7 +397,7 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
             anchorSize={9}
             anchorCornerRadius={2}
             rotateAnchorOffset={24}
-            keepRatio={false}
+            keepRatio={true}
           />
         </Layer>
       </Stage>
