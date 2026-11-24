@@ -12,6 +12,8 @@ import {
   Sparkles,
   Lock,
   Unlock,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 // Dynamic import with SSR disabled for Konva canvas engine
@@ -34,6 +36,7 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
   const [isSpacePressed, setIsSpacePressed] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [isZoomCollapsed, setIsZoomCollapsed] = useState(false);
 
   // Touch tracking for mobile pinch & pan
   const [touchDistance, setTouchDistance] = useState<number | null>(null);
@@ -57,6 +60,8 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
     showGuides,
     setShowGuides,
     addLayer,
+    selectedLayerIds,
+    isMobileTextTemplatesOpen,
   } = useEditorStore();
 
   // Spacebar panning detection
@@ -256,67 +261,106 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
         </button>
       </div>
 
-      {/* Floating Canvas Lock & Zoom Controls (Top-right on Mobile, Bottom-right on Desktop) */}
-      <div className="absolute top-2.5 right-2.5 md:top-auto md:bottom-4 md:right-4 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-md px-2 py-1 rounded-2xl shadow-lg border border-slate-200">
-        {/* Canvas Lock / Unlock Toggle Button */}
-        <button
-          onClick={toggleCanvasLock}
-          title={isCanvasLocked ? "Canvas is Locked. Tap to unlock canvas to pan." : "Canvas is Unlocked (Pan enabled). Tap to lock."}
-          className={`flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-bold transition-all ${
-            isCanvasLocked
-              ? 'bg-amber-50 text-amber-800 border border-amber-300/80 hover:bg-amber-100 shadow-xs'
-              : 'bg-emerald-50 text-emerald-800 border border-emerald-300/80 hover:bg-emerald-100 shadow-xs'
-          }`}
-        >
-          {isCanvasLocked ? (
-            <>
-              <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-              <span className="text-[11px]">Locked</span>
-            </>
-          ) : (
-            <>
-              <Unlock className="w-3.5 h-3.5 text-emerald-600 shrink-0 animate-pulse" />
-              <span className="text-[11px]">Unlocked</span>
-            </>
-          )}
-        </button>
+      {/* Floating Canvas Lock & Zoom Controls (Positioned at bottom with Collapsible Arrow Toggle) */}
+      <div 
+        className={`absolute ${
+          selectedLayerIds.length > 0 || isMobileTextTemplatesOpen
+            ? 'bottom-16 md:bottom-4'
+            : 'bottom-3 md:bottom-4'
+        } right-2 md:right-4 z-30 transition-all duration-200`}
+      >
+        {isZoomCollapsed ? (
+          /* Collapsed Mini-Pill (Up Arrow Toggle) */
+          <button
+            onClick={() => setIsZoomCollapsed(false)}
+            title="Expand Zoom & Canvas Controls"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/95 backdrop-blur-md rounded-2xl shadow-lg border border-slate-200/90 text-xs font-semibold text-slate-700 hover:text-purple-700 hover:bg-purple-50/50 transition-all active:scale-95"
+          >
+            <ChevronUp className="w-3.5 h-3.5 text-purple-600 animate-bounce" />
+            {isCanvasLocked ? (
+              <Lock className="w-3 h-3 text-amber-600" />
+            ) : (
+              <Unlock className="w-3 h-3 text-emerald-600" />
+            )}
+            <span className="font-mono text-[11px] font-bold text-slate-800">
+              {Math.round(zoom * 100)}%
+            </span>
+          </button>
+        ) : (
+          /* Expanded Full Controls (with Down Arrow Collapse Toggle) */
+          <div className="flex items-center gap-1 bg-white/95 backdrop-blur-md px-2 py-1 rounded-2xl shadow-lg border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            {/* Canvas Lock / Unlock Toggle Button */}
+            <button
+              onClick={toggleCanvasLock}
+              title={isCanvasLocked ? "Canvas is Locked. Tap to unlock canvas to pan." : "Canvas is Unlocked (Pan enabled). Tap to lock."}
+              className={`flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-bold transition-all ${
+                isCanvasLocked
+                  ? 'bg-amber-50 text-amber-800 border border-amber-300/80 hover:bg-amber-100 shadow-xs'
+                  : 'bg-emerald-50 text-emerald-800 border border-emerald-300/80 hover:bg-emerald-100 shadow-xs'
+              }`}
+            >
+              {isCanvasLocked ? (
+                <>
+                  <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span className="text-[11px]">Locked</span>
+                </>
+              ) : (
+                <>
+                  <Unlock className="w-3.5 h-3.5 text-emerald-600 shrink-0 animate-pulse" />
+                  <span className="text-[11px]">Unlocked</span>
+                </>
+              )}
+            </button>
 
-        <div className="h-4 w-[1px] bg-slate-200 mx-0.5" />
+            <div className="h-4 w-[1px] bg-slate-200 mx-0.5" />
 
-        {/* Zoom Out Button */}
-        <button
-          onClick={zoomOut}
-          title="Zoom Out"
-          className="p-1.5 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-        >
-          <ZoomOut className="w-3.5 h-3.5 md:w-4 md:h-4" />
-        </button>
+            {/* Zoom Out Button */}
+            <button
+              onClick={zoomOut}
+              title="Zoom Out"
+              className="p-1.5 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <ZoomOut className="w-3.5 h-3.5 md:w-4 md:h-4" />
+            </button>
 
-        {/* Zoom Percentage */}
-        <span className="text-[11px] md:text-xs font-bold text-slate-800 w-10 text-center select-none font-mono">
-          {Math.round(zoom * 100)}%
-        </span>
+            {/* Zoom Percentage */}
+            <span className="text-[11px] md:text-xs font-bold text-slate-800 w-10 text-center select-none font-mono">
+              {Math.round(zoom * 100)}%
+            </span>
 
-        {/* Zoom In Button */}
-        <button
-          onClick={zoomIn}
-          title="Zoom In"
-          className="p-1.5 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-        >
-          <ZoomIn className="w-3.5 h-3.5 md:w-4 md:h-4" />
-        </button>
+            {/* Zoom In Button */}
+            <button
+              onClick={zoomIn}
+              title="Zoom In"
+              className="p-1.5 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <ZoomIn className="w-3.5 h-3.5 md:w-4 md:h-4" />
+            </button>
 
-        <div className="h-4 w-[1px] bg-slate-200 mx-0.5" />
+            <div className="h-4 w-[1px] bg-slate-200 mx-0.5" />
 
-        {/* Fit to Screen Button */}
-        <button
-          onClick={resetZoomPan}
-          title="Fit Canvas to Screen"
-          className="flex items-center gap-1 px-2 py-1 text-[11px] md:text-xs font-semibold text-slate-700 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
-        >
-          <Maximize2 className="w-3 h-3 md:w-3.5 md:h-3.5" />
-          <span>Fit</span>
-        </button>
+            {/* Fit to Screen Button */}
+            <button
+              onClick={resetZoomPan}
+              title="Fit Canvas to Screen"
+              className="flex items-center gap-1 px-2 py-1 text-[11px] md:text-xs font-semibold text-slate-700 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
+            >
+              <Maximize2 className="w-3 h-3 md:w-3.5 md:h-3.5" />
+              <span>Fit</span>
+            </button>
+
+            <div className="h-4 w-[1px] bg-slate-200 mx-0.5" />
+
+            {/* Collapse Arrow Toggle Button (Down Arrow) */}
+            <button
+              onClick={() => setIsZoomCollapsed(true)}
+              title="Collapse Toolbar"
+              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

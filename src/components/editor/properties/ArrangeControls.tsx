@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useEditorStore } from '@/store/useEditorStore';
+import MovementControls from './MovementControls';
 import {
   AlignLeft,
   AlignCenter,
@@ -43,6 +44,9 @@ export default function ArrangeControls() {
 
   return (
     <div className="space-y-4 pt-2 border-t border-slate-200">
+      {/* Precision Movement & Nudge Controls */}
+      <MovementControls />
+
       <div>
         <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block mb-2">
           Align To Canvas

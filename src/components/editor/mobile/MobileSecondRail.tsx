@@ -20,7 +20,8 @@ import {
   Eye, 
   PenLine,
   X,
-  Sparkle
+  Sparkle,
+  Move,
 } from 'lucide-react';
 
 export default function MobileSecondRail() {
@@ -328,6 +329,20 @@ export default function MobileSecondRail() {
               <Sparkles className="w-4 h-4" />
               <span className="text-[9px] mt-0.5 leading-none">Effects</span>
             </button>
+
+            {/* Move & Nudge Position */}
+            <button
+              onClick={() => toggleProperty('move')}
+              className={`p-2 rounded-xl flex flex-col items-center justify-center transition-all ${
+                activeMobileProperty === 'move'
+                  ? 'bg-purple-100 text-purple-700 shadow-xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+              title="Move & Nudge"
+            >
+              <Move className="w-4 h-4" />
+              <span className="text-[9px] mt-0.5 leading-none">Move</span>
+            </button>
           </>
         )}
 
@@ -398,6 +413,20 @@ export default function MobileSecondRail() {
             >
               <Eye className="w-4 h-4" />
               <span className="text-[9px] mt-0.5 leading-none">Opacity</span>
+            </button>
+
+            {/* Move & Nudge Position */}
+            <button
+              onClick={() => toggleProperty('move')}
+              className={`p-2 rounded-xl flex flex-col items-center justify-center transition-all ${
+                activeMobileProperty === 'move'
+                  ? 'bg-purple-100 text-purple-700 shadow-xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+              title="Move & Nudge"
+            >
+              <Move className="w-4 h-4" />
+              <span className="text-[9px] mt-0.5 leading-none">Move</span>
             </button>
           </>
         )}
@@ -495,6 +524,20 @@ export default function MobileSecondRail() {
             >
               <Eye className="w-4 h-4" />
               <span className="text-[9px] mt-0.5 leading-none">Opacity</span>
+            </button>
+
+            {/* Move & Nudge Position */}
+            <button
+              onClick={() => toggleProperty('move')}
+              className={`p-2 rounded-xl flex flex-col items-center justify-center transition-all ${
+                activeMobileProperty === 'move'
+                  ? 'bg-purple-100 text-purple-700 shadow-xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+              title="Move & Nudge"
+            >
+              <Move className="w-4 h-4" />
+              <span className="text-[9px] mt-0.5 leading-none">Move</span>
             </button>
           </>
         )}

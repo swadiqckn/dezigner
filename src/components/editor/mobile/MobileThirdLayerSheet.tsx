@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useEditorStore } from '@/store/useEditorStore';
 import { POPULAR_FONTS, FONT_PAIRINGS } from '@/constants/fonts';
 import ColorPickerSection from '../properties/ColorPickerSection';
+import MovementControls from '../properties/MovementControls';
 import { 
   X, 
   Bold, 
@@ -117,6 +118,8 @@ export default function MobileThirdLayerSheet() {
         return 'Rotation';
       case 'effects':
         return 'Shadow & Effects';
+      case 'move':
+        return 'Move & Nudge Position';
       case 'radius':
         return 'Corner Radius';
       case 'opacity':
@@ -724,6 +727,13 @@ export default function MobileThirdLayerSheet() {
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* 14. MOVE / NUDGE POSITION */}
+          {activeMobileProperty === 'move' && layer && (
+            <div className="space-y-3">
+              <MovementControls />
             </div>
           )}
         </div>
