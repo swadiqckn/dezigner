@@ -131,6 +131,9 @@ interface EditorState {
   setSnapToGrid: (snap: boolean) => void;
   setShowRulers: (show: boolean) => void;
   setShowGuides: (show: boolean) => void;
+  isCanvasLocked: boolean;
+  toggleCanvasLock: () => void;
+  setIsCanvasLocked: (locked: boolean) => void;
   setIsExportModalOpen: (open: boolean) => void;
   setIsPreviewModalOpen: (open: boolean) => void;
   setIsErpModalOpen: (open: boolean) => void;
@@ -182,6 +185,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     gridSize: 20,
     showRulers: true,
     showGuides: true,
+    isCanvasLocked: true,
 
     activeTab: 'text',
     isMobileDrawerOpen: false,
@@ -648,6 +652,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
     setSnapToGrid: (snapToGrid) => set({ snapToGrid }),
     setShowRulers: (showRulers) => set({ showRulers }),
     setShowGuides: (showGuides) => set({ showGuides }),
+    toggleCanvasLock: () => set((state) => ({ isCanvasLocked: !state.isCanvasLocked })),
+    setIsCanvasLocked: (isCanvasLocked) => set({ isCanvasLocked }),
     setIsExportModalOpen: (isExportModalOpen) => set({ isExportModalOpen }),
     setIsPreviewModalOpen: (isPreviewModalOpen) => set({ isPreviewModalOpen }),
     setIsErpModalOpen: (isErpModalOpen) => set({ isErpModalOpen }),

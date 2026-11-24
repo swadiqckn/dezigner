@@ -10,6 +10,8 @@ import {
   Maximize2, 
   Grid, 
   Sparkles,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 
 // Dynamic import with SSR disabled for Konva canvas engine
@@ -47,6 +49,8 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
     zoomIn,
     zoomOut,
     resetZoomPan,
+    isCanvasLocked,
+    toggleCanvasLock,
     showGrid,
     setShowGrid,
     showRulers,
@@ -94,8 +98,8 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
 
   // Mouse pan handlers
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (isSpacePressed || e.button === 1) {
-      // Space + Left Click or Middle Click
+    if (!isCanvasLocked && (isSpacePressed || e.button === 1 || e.target === containerRef.current)) {
+      // Space + Left Click or Middle Click or background drag when canvas is unlocked
       e.preventDefault();
       setIsPanning(true);
       setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
@@ -124,8 +128,12 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
         e.touches[0].clientY - e.touches[1].clientY
       );
       setTouchDistance(dist);
-    } else if (e.touches.length === 1 && (e.target === containerRef.current || (e.target as HTMLElement).tagName === 'CANVAS')) {
-      // One finger pan on background
+    } else if (
+      !isCanvasLocked &&
+      e.touches.length === 1 &&
+      (e.target === containerRef.current || (e.target as HTMLElement).tagName === 'CANVAS')
+    ) {
+      // One finger pan on background ONLY when canvas is unlocked
       setIsPanning(true);
       setPanStart({ x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y });
     }
@@ -189,7 +197,7 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
     <div
       ref={containerRef}
       className={`relative flex-1 min-w-0 h-full bg-slate-100/90 overflow-hidden select-none flex flex-col ${
-        isSpacePressed || isPanning ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
+        !isCanvasLocked && (isSpacePressed || isPanning) ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
       }`}
       onWheel={handleWheel}
       onMouseDown={handleMouseDown}
@@ -248,34 +256,63 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
         </button>
       </div>
 
-      {/* Bottom Right Floating Zoom Controls */}
-      <div className="absolute bottom-3 md:bottom-4 right-3 md:right-4 z-20 flex items-center gap-1 bg-white/95 backdrop-blur-md px-1.5 py-1 rounded-xl shadow-md border border-slate-200">
+      {/* Floating Canvas Lock & Zoom Controls (Top-right on Mobile, Bottom-right on Desktop) */}
+      <div className="absolute top-2.5 right-2.5 md:top-auto md:bottom-4 md:right-4 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-md px-2 py-1 rounded-2xl shadow-lg border border-slate-200">
+        {/* Canvas Lock / Unlock Toggle Button */}
+        <button
+          onClick={toggleCanvasLock}
+          title={isCanvasLocked ? "Canvas is Locked. Tap to unlock canvas to pan." : "Canvas is Unlocked (Pan enabled). Tap to lock."}
+          className={`flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-bold transition-all ${
+            isCanvasLocked
+              ? 'bg-amber-50 text-amber-800 border border-amber-300/80 hover:bg-amber-100 shadow-xs'
+              : 'bg-emerald-50 text-emerald-800 border border-emerald-300/80 hover:bg-emerald-100 shadow-xs'
+          }`}
+        >
+          {isCanvasLocked ? (
+            <>
+              <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span className="text-[11px]">Locked</span>
+            </>
+          ) : (
+            <>
+              <Unlock className="w-3.5 h-3.5 text-emerald-600 shrink-0 animate-pulse" />
+              <span className="text-[11px]">Unlocked</span>
+            </>
+          )}
+        </button>
+
+        <div className="h-4 w-[1px] bg-slate-200 mx-0.5" />
+
+        {/* Zoom Out Button */}
         <button
           onClick={zoomOut}
           title="Zoom Out"
-          className="p-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+          className="p-1.5 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
         >
           <ZoomOut className="w-3.5 h-3.5 md:w-4 md:h-4" />
         </button>
 
-        <span className="text-[11px] md:text-xs font-semibold text-slate-700 w-10 text-center select-none font-mono">
+        {/* Zoom Percentage */}
+        <span className="text-[11px] md:text-xs font-bold text-slate-800 w-10 text-center select-none font-mono">
           {Math.round(zoom * 100)}%
         </span>
 
+        {/* Zoom In Button */}
         <button
           onClick={zoomIn}
           title="Zoom In"
-          className="p-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+          className="p-1.5 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
         >
           <ZoomIn className="w-3.5 h-3.5 md:w-4 md:h-4" />
         </button>
 
-        <div className="h-3.5 w-[1px] bg-slate-200 mx-0.5" />
+        <div className="h-4 w-[1px] bg-slate-200 mx-0.5" />
 
+        {/* Fit to Screen Button */}
         <button
           onClick={resetZoomPan}
           title="Fit Canvas to Screen"
-          className="flex items-center gap-0.5 px-1.5 py-0.5 text-[11px] md:text-xs font-medium text-slate-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
+          className="flex items-center gap-1 px-2 py-1 text-[11px] md:text-xs font-semibold text-slate-700 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
         >
           <Maximize2 className="w-3 h-3 md:w-3.5 md:h-3.5" />
           <span>Fit</span>
