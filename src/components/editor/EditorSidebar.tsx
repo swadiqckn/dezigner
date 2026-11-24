@@ -1,8 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useEditorStore, SidebarTab } from '@/store/useEditorStore';
-import TemplatesPanel from './sidebar-panels/TemplatesPanel';
 import ElementsPanel from './sidebar-panels/ElementsPanel';
 import TextPanel from './sidebar-panels/TextPanel';
 import UploadsPanel from './sidebar-panels/UploadsPanel';
@@ -10,7 +9,6 @@ import BackgroundPanel from './sidebar-panels/BackgroundPanel';
 import LayersPanel from './sidebar-panels/LayersPanel';
 import ErpIntegrationPanel from './sidebar-panels/ErpIntegrationPanel';
 import {
-  LayoutTemplate,
   Shapes,
   Type,
   UploadCloud,
@@ -18,7 +16,6 @@ import {
   Layers,
   Building2,
   ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 
 interface TabItem {
@@ -28,10 +25,9 @@ interface TabItem {
   badge?: string;
 }
 
-const TABS: TabItem[] = [
-  { id: 'templates', label: 'Templates', icon: LayoutTemplate },
-  { id: 'elements', label: 'Elements', icon: Shapes },
+export const SIDEBAR_TABS: TabItem[] = [
   { id: 'text', label: 'Text', icon: Type },
+  { id: 'elements', label: 'Elements', icon: Shapes },
   { id: 'uploads', label: 'Uploads', icon: UploadCloud },
   { id: 'background', label: 'Background', icon: Palette },
   { id: 'layers', label: 'Layers', icon: Layers },
@@ -40,20 +36,30 @@ const TABS: TabItem[] = [
 
 export default function EditorSidebar() {
   const { activeTab, setActiveTab } = useEditorStore();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
+
+  const handleTabClick = (tabId: SidebarTab) => {
+    if (activeTab === tabId && isDrawerOpen) {
+      setIsDrawerOpen(false);
+    } else {
+      setActiveTab(tabId);
+      setIsDrawerOpen(true);
+    }
+  };
 
   return (
-    <div className="flex h-full border-r border-slate-200 select-none z-10">
-      {/* Mini Icon Strip (Canva-inspired) */}
-      <div className="w-18 bg-white border-r border-slate-200 flex flex-col items-center py-3 space-y-1.5 shrink-0">
-        {TABS.map((tab) => {
+    <aside className="hidden md:flex h-full border-r border-slate-200 select-none z-10 shrink-0">
+      {/* Mini Icon Strip (Desktop) */}
+      <div className="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-3 space-y-1.5 shrink-0">
+        {SIDEBAR_TABS.map((tab) => {
           const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
+          const isActive = activeTab === tab.id && isDrawerOpen;
 
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`w-14 py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all relative ${
+              onClick={() => handleTabClick(tab.id)}
+              className={`w-13 py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all relative ${
                 isActive
                   ? 'bg-purple-50 text-purple-700 font-bold'
                   : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
@@ -65,7 +71,7 @@ export default function EditorSidebar() {
               </span>
 
               {tab.badge && (
-                <span className="absolute top-1 right-1 text-[8px] bg-purple-600 text-white font-extrabold px-1 rounded-full">
+                <span className="absolute top-1 right-0.5 text-[8px] bg-purple-600 text-white font-extrabold px-1 rounded-full">
                   {tab.badge}
                 </span>
               )}
@@ -79,15 +85,24 @@ export default function EditorSidebar() {
       </div>
 
       {/* Expanded Sidebar Panel Drawer */}
-      <div className="w-80 h-full bg-white p-4 flex flex-col shrink-0">
-        {activeTab === 'templates' && <TemplatesPanel />}
-        {activeTab === 'elements' && <ElementsPanel />}
-        {activeTab === 'text' && <TextPanel />}
-        {activeTab === 'uploads' && <UploadsPanel />}
-        {activeTab === 'background' && <BackgroundPanel />}
-        {activeTab === 'layers' && <LayersPanel />}
-        {activeTab === 'erp' && <ErpIntegrationPanel />}
-      </div>
-    </div>
+      {isDrawerOpen && (
+        <div className="w-80 h-full bg-white p-4 flex flex-col shrink-0 relative border-r border-slate-100">
+          <button
+            onClick={() => setIsDrawerOpen(false)}
+            title="Collapse Sidebar Drawer"
+            className="absolute top-3 right-3 p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 z-10 transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          {activeTab === 'text' && <TextPanel />}
+          {activeTab === 'elements' && <ElementsPanel />}
+          {activeTab === 'uploads' && <UploadsPanel />}
+          {activeTab === 'background' && <BackgroundPanel />}
+          {activeTab === 'layers' && <LayersPanel />}
+          {activeTab === 'erp' && <ErpIntegrationPanel />}
+        </div>
+      )}
+    </aside>
   );
 }

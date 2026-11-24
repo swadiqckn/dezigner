@@ -20,9 +20,8 @@ interface HistorySnapshot {
 }
 
 export type SidebarTab = 
-  | 'templates' 
-  | 'elements' 
   | 'text' 
+  | 'elements' 
   | 'uploads' 
   | 'background' 
   | 'layers' 
@@ -54,6 +53,8 @@ interface EditorState {
 
   // Active UI tab & modals
   activeTab: SidebarTab;
+  isMobileDrawerOpen: boolean;
+  isPropertiesDrawerOpen: boolean;
   isExportModalOpen: boolean;
   isPreviewModalOpen: boolean;
   isErpModalOpen: boolean;
@@ -124,6 +125,8 @@ interface EditorState {
 
   // UI state toggles
   setActiveTab: (tab: SidebarTab) => void;
+  setIsMobileDrawerOpen: (open: boolean) => void;
+  setIsPropertiesDrawerOpen: (open: boolean) => void;
   setShowGrid: (show: boolean) => void;
   setSnapToGrid: (snap: boolean) => void;
   setShowRulers: (show: boolean) => void;
@@ -160,21 +163,18 @@ export const useEditorStore = create<EditorState>((set, get) => {
     }));
   };
 
-  // Initial template
-  const initialTemplate = POSTER_TEMPLATES[0];
-
   return {
-    title: initialTemplate.title,
-    width: initialTemplate.canvas.width,
-    height: initialTemplate.canvas.height,
-    background: initialTemplate.canvas.background,
+    title: "Untitled Poster",
+    width: DEFAULT_WIDTH,
+    height: DEFAULT_HEIGHT,
+    background: { type: 'solid', color: '#FFFFFF' },
     presetName: "Instagram Portrait",
 
-    layers: JSON.parse(JSON.stringify(initialTemplate.layers)),
-    selectedLayerIds: [initialTemplate.layers[4]?.id || initialTemplate.layers[0]?.id],
+    layers: [],
+    selectedLayerIds: [],
     clipboard: [],
 
-    zoom: 0.55,
+    zoom: 0.5,
     pan: { x: 0, y: 0 },
 
     showGrid: false,
@@ -183,7 +183,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
     showRulers: true,
     showGuides: true,
 
-    activeTab: 'templates',
+    activeTab: 'text',
+    isMobileDrawerOpen: false,
+    isPropertiesDrawerOpen: false,
     isExportModalOpen: false,
     isPreviewModalOpen: false,
     isErpModalOpen: false,
@@ -431,11 +433,15 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     resetZoomPan: () => {
       const { width, height } = get();
-      // Calculate an initial nice fit for common desktop screens (workspace approx 800x700)
-      const targetW = 800;
-      const targetH = 650;
-      const fitZoom = Math.min(targetW / width, targetH / height, 0.7);
-      set({ zoom: Math.max(0.2, fitZoom), pan: { x: 0, y: 0 } });
+      let availW = 800;
+      let availH = 650;
+      if (typeof window !== 'undefined') {
+        const isMobile = window.innerWidth < 768;
+        availW = isMobile ? window.innerWidth - 32 : Math.max(300, window.innerWidth - 500);
+        availH = isMobile ? window.innerHeight - 200 : Math.max(300, window.innerHeight - 150);
+      }
+      const fitZoom = Math.min(availW / width, availH / height, 0.75);
+      set({ zoom: Math.max(0.1, Number(fitZoom.toFixed(2))), pan: { x: 0, y: 0 } });
     },
 
     zoomIn: () => {
@@ -635,6 +641,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
 
     setActiveTab: (activeTab) => set({ activeTab }),
+    setIsMobileDrawerOpen: (isMobileDrawerOpen) => set({ isMobileDrawerOpen }),
+    setIsPropertiesDrawerOpen: (isPropertiesDrawerOpen) => set({ isPropertiesDrawerOpen }),
     setShowGrid: (showGrid) => set({ showGrid }),
     setSnapToGrid: (snapToGrid) => set({ snapToGrid }),
     setShowRulers: (showRulers) => set({ showRulers }),

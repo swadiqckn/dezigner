@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import Konva from 'konva';
 import EditorHeader from './EditorHeader';
 import EditorSidebar from './EditorSidebar';
@@ -10,6 +10,9 @@ import ExportModal from './modals/ExportModal';
 import PreviewModal from './modals/PreviewModal';
 import ErpDocsModal from './modals/ErpDocsModal';
 import KeyboardShortcutsModal from './modals/KeyboardShortcutsModal';
+import MobileBottomNav from './mobile/MobileBottomNav';
+import MobileDrawerSheet from './mobile/MobileDrawerSheet';
+import MobileContextToolbar from './mobile/MobileContextToolbar';
 import { useEditorStore } from '@/store/useEditorStore';
 import { parseERPConfig } from '@/utils/urlConfigParser';
 import { exportCanvas } from '@/utils/exportUtils';
@@ -20,7 +23,18 @@ export default function PosterEditor() {
   const [showInjectedBanner, setShowInjectedBanner] = useState(false);
   const { loadFromConfig, resetZoomPan, erpMeta } = useEditorStore();
 
-  // 1. Check for URL parameters (?config=... or ?institution=...) on mount
+  // 1. Initial responsive zoom calculation
+  useEffect(() => {
+    resetZoomPan();
+    const handleResize = () => {
+      // Auto adjust zoom on window resize if not customized
+      resetZoomPan();
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [resetZoomPan]);
+
+  // 2. Check for URL parameters (?config=... or ?institution=...) on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -34,7 +48,7 @@ export default function PosterEditor() {
     }
   }, [loadFromConfig]);
 
-  // 2. Setup PostMessage listener for parent ERP iframe communication
+  // 3. Setup PostMessage listener for parent ERP iframe communication
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
       const data = event.data;
@@ -81,16 +95,16 @@ export default function PosterEditor() {
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-white select-none">
       {/* External ERP Injected Alert Banner */}
       {showInjectedBanner && erpMeta?.tenantName && (
-        <div className="bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 text-white px-4 py-1.5 flex items-center justify-between text-xs font-semibold shadow-md shrink-0 z-40 animate-in slide-in-from-top duration-300">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-300" />
-            <span>
-              External ERP Session Active: <strong>{erpMeta.tenantName}</strong> branding loaded with protected layers.
+        <div className="bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 text-white px-3 md:px-4 py-1.5 flex items-center justify-between text-[11px] md:text-xs font-semibold shadow-md shrink-0 z-40 animate-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-1.5 truncate">
+            <ShieldCheck className="w-4 h-4 text-emerald-300 shrink-0" />
+            <span className="truncate">
+              ERP Active: <strong>{erpMeta.tenantName}</strong> branding loaded.
             </span>
           </div>
           <button
             onClick={() => setShowInjectedBanner(false)}
-            className="p-1 hover:bg-white/20 rounded-full transition-colors text-white/80 hover:text-white"
+            className="p-1 hover:bg-white/20 rounded-full transition-colors text-white/80 hover:text-white shrink-0 ml-2"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -101,16 +115,27 @@ export default function PosterEditor() {
       <EditorHeader />
 
       {/* Main Studio Workspace Area */}
-      <div className="flex flex-1 h-[calc(100vh-4rem)] overflow-hidden">
-        {/* Left Sidebar */}
+      <div className="flex flex-1 h-[calc(100vh-3.5rem)] md:h-[calc(100vh-4rem)] pb-16 md:pb-0 overflow-hidden relative">
+        {/* Left Sidebar (Desktop only) */}
         <EditorSidebar />
 
         {/* Central Canvas Viewport */}
         <CanvasWorkspace onStageReady={setStageInstance} />
 
-        {/* Right Properties Panel */}
-        <PropertiesPanel />
+        {/* Right Properties Panel (Desktop only) */}
+        <div className="hidden md:flex h-full">
+          <PropertiesPanel />
+        </div>
       </div>
+
+      {/* Mobile Floating Context Toolbar (when an object is selected) */}
+      <MobileContextToolbar />
+
+      {/* Mobile Bottom Navigation Bar */}
+      <MobileBottomNav />
+
+      {/* Mobile Slide-up Drawer Sheet */}
+      <MobileDrawerSheet />
 
       {/* Modals */}
       <ExportModal stage={stageInstance} />

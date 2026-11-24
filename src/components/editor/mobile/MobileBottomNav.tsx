@@ -1,0 +1,46 @@
+'use client';
+
+import React from 'react';
+import { useEditorStore, SidebarTab } from '@/store/useEditorStore';
+import { SIDEBAR_TABS } from '../EditorSidebar';
+import { Plus } from 'lucide-react';
+
+export default function MobileBottomNav() {
+  const {
+    activeTab,
+    setActiveTab,
+    isMobileDrawerOpen,
+    setIsMobileDrawerOpen,
+    setIsPropertiesDrawerOpen,
+  } = useEditorStore();
+
+  const handleTabClick = (tabId: SidebarTab) => {
+    setActiveTab(tabId);
+    setIsPropertiesDrawerOpen(false);
+    setIsMobileDrawerOpen(true);
+  };
+
+  return (
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 px-2 flex items-center justify-around z-40 select-none shadow-lg">
+      {SIDEBAR_TABS.map((tab) => {
+        const Icon = tab.icon;
+        const isActive = isMobileDrawerOpen && activeTab === tab.id;
+
+        return (
+          <button
+            key={tab.id}
+            onClick={() => handleTabClick(tab.id)}
+            className={`flex-1 flex flex-col items-center justify-center py-1 transition-colors ${
+              isActive ? 'text-purple-600 font-bold' : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            <div className={`p-1 rounded-xl transition-colors ${isActive ? 'bg-purple-100' : ''}`}>
+              <Icon className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] leading-tight mt-0.5">{tab.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}

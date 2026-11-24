@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Konva from 'konva';
 import { useEditorStore } from '@/store/useEditorStore';
@@ -8,21 +8,17 @@ import {
   ZoomIn, 
   ZoomOut, 
   Maximize2, 
-  RotateCcw, 
   Grid, 
-  Sliders, 
-  Eye, 
   Sparkles,
-  Move
 } from 'lucide-react';
 
 // Dynamic import with SSR disabled for Konva canvas engine
 const KonvaStageDynamic = dynamic(() => import('./KonvaStage'), {
   ssr: false,
   loading: () => (
-    <div className="flex flex-col items-center justify-center p-12 text-slate-400">
-      <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4" />
-      <p className="text-sm font-medium">Initializing High-Resolution Canvas Engine...</p>
+    <div className="flex flex-col items-center justify-center p-8 text-slate-400">
+      <div className="w-8 h-8 border-3 border-purple-500 border-t-transparent rounded-full animate-spin mb-3" />
+      <p className="text-xs font-medium">Loading Canvas Studio...</p>
     </div>
   ),
 });
@@ -36,6 +32,9 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
   const [isSpacePressed, setIsSpacePressed] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+
+  // Touch tracking for mobile pinch & pan
+  const [touchDistance, setTouchDistance] = useState<number | null>(null);
 
   const {
     width,
@@ -51,7 +50,6 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
     showGrid,
     setShowGrid,
     showRulers,
-    setShowRulers,
     showGuides,
     setShowGuides,
     addLayer,
@@ -117,6 +115,47 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
     setIsPanning(false);
   };
 
+  // Mobile Touch Pan & Pinch-to-zoom handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      // Pinch start
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      setTouchDistance(dist);
+    } else if (e.touches.length === 1 && (e.target === containerRef.current || (e.target as HTMLElement).tagName === 'CANVAS')) {
+      // One finger pan on background
+      setIsPanning(true);
+      setPanStart({ x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y });
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && touchDistance !== null) {
+      // Pinch move
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const factor = dist / touchDistance;
+      if (Math.abs(factor - 1) > 0.02) {
+        setZoom((z) => Math.min(3, Math.max(0.1, Number((z * factor).toFixed(2)))));
+        setTouchDistance(dist);
+      }
+    } else if (e.touches.length === 1 && isPanning) {
+      setPan({
+        x: e.touches[0].clientX - panStart.x,
+        y: e.touches[0].clientY - panStart.y,
+      });
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTouchDistance(null);
+    setIsPanning(false);
+  };
+
   // Handle Drag-and-Drop Image onto Canvas
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -149,19 +188,22 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
   return (
     <div
       ref={containerRef}
-      className={`relative flex-1 h-full bg-slate-100/90 overflow-hidden select-none flex flex-col ${
+      className={`relative flex-1 min-w-0 h-full bg-slate-100/90 overflow-hidden select-none flex flex-col ${
         isSpacePressed || isPanning ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
       }`}
       onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
     >
-      {/* Top Ruler Bar (Optional) */}
+      {/* Top Ruler Bar (Desktop only) */}
       {showRulers && (
-        <div className="h-6 w-full bg-slate-200 border-b border-slate-300 text-[10px] text-slate-500 flex items-center px-6 font-mono select-none">
+        <div className="hidden md:flex h-6 w-full bg-slate-200 border-b border-slate-300 text-[10px] text-slate-500 items-center px-6 font-mono select-none shrink-0">
           <div className="flex justify-between w-full">
             <span>0 px</span>
             <span>{Math.round(width / 4)} px</span>
@@ -173,17 +215,17 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
       )}
 
       {/* Main Canvas Scroll Area */}
-      <div className="relative flex-1 w-full h-full flex items-center justify-center p-8 overflow-hidden">
+      <div className="relative flex-1 w-full h-full flex items-center justify-center p-2 sm:p-4 md:p-8 overflow-hidden">
         <KonvaStageDynamic onStageReady={onStageReady} />
       </div>
 
-      {/* Bottom Floating Status Bar */}
-      <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-xl shadow-md border border-slate-200 text-xs text-slate-600 font-medium">
+      {/* Bottom Floating Status Bar (Desktop & Tablet) */}
+      <div className="hidden sm:flex absolute bottom-3 md:bottom-4 left-3 md:left-4 z-20 items-center gap-2 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl shadow-md border border-slate-200 text-xs text-slate-600 font-medium">
         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-        <span className="text-slate-900 font-semibold">{presetName}</span>
+        <span className="text-slate-900 font-semibold truncate max-w-[120px]">{presetName}</span>
         <span className="text-slate-400">•</span>
-        <span>
-          {width} × {height} px
+        <span className="font-mono">
+          {width} × {height}
         </span>
         <span className="text-slate-400">•</span>
         <button
@@ -207,35 +249,35 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
       </div>
 
       {/* Bottom Right Floating Zoom Controls */}
-      <div className="absolute bottom-4 right-4 z-20 flex items-center gap-1.5 bg-white/95 backdrop-blur-md px-2 py-1.5 rounded-xl shadow-md border border-slate-200">
+      <div className="absolute bottom-3 md:bottom-4 right-3 md:right-4 z-20 flex items-center gap-1 bg-white/95 backdrop-blur-md px-1.5 py-1 rounded-xl shadow-md border border-slate-200">
         <button
           onClick={zoomOut}
-          title="Zoom Out (Ctrl -)"
-          className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+          title="Zoom Out"
+          className="p-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
         >
-          <ZoomOut className="w-4 h-4" />
+          <ZoomOut className="w-3.5 h-3.5 md:w-4 md:h-4" />
         </button>
 
-        <span className="text-xs font-semibold text-slate-700 w-12 text-center select-none">
+        <span className="text-[11px] md:text-xs font-semibold text-slate-700 w-10 text-center select-none font-mono">
           {Math.round(zoom * 100)}%
         </span>
 
         <button
           onClick={zoomIn}
-          title="Zoom In (Ctrl +)"
-          className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+          title="Zoom In"
+          className="p-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
         >
-          <ZoomIn className="w-4 h-4" />
+          <ZoomIn className="w-3.5 h-3.5 md:w-4 md:h-4" />
         </button>
 
-        <div className="h-4 w-[1px] bg-slate-200 mx-0.5" />
+        <div className="h-3.5 w-[1px] bg-slate-200 mx-0.5" />
 
         <button
           onClick={resetZoomPan}
           title="Fit Canvas to Screen"
-          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
+          className="flex items-center gap-0.5 px-1.5 py-0.5 text-[11px] md:text-xs font-medium text-slate-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
         >
-          <Maximize2 className="w-3.5 h-3.5" />
+          <Maximize2 className="w-3 h-3 md:w-3.5 md:h-3.5" />
           <span>Fit</span>
         </button>
       </div>

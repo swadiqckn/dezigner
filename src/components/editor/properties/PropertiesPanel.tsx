@@ -21,11 +21,26 @@ import {
 
 export default function PropertiesPanel() {
   const { layers, selectedLayerIds, renameLayer } = useEditorStore();
+  const [isCollapsed, setIsCollapsed] = React.useState(false);
 
   const selectedLayer = layers.find((l) => selectedLayerIds.includes(l.id));
 
+  if (isCollapsed) {
+    return (
+      <div className="h-full bg-white border-l border-slate-200 p-2 flex flex-col items-center shrink-0">
+        <button
+          onClick={() => setIsCollapsed(false)}
+          title="Open Properties Panel"
+          className="p-2 text-slate-500 hover:text-purple-600 hover:bg-slate-100 rounded-xl transition-colors"
+        >
+          <Sliders className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <aside className="w-80 h-full bg-white border-l border-slate-200 flex flex-col shrink-0 overflow-y-auto select-none">
+    <aside className="w-80 h-full bg-white border-l border-slate-200 flex flex-col shrink-0 overflow-y-auto select-none relative">
       {/* Header */}
       <div className="p-4 border-b border-slate-200 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -52,17 +67,27 @@ export default function PropertiesPanel() {
           )}
         </div>
 
-        {selectedLayer && selectedLayer.locked && (
-          <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-            <Lock className="w-3 h-3" /> Locked
-          </span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {selectedLayer && selectedLayer.locked && (
+            <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+              <Lock className="w-3 h-3" /> Locked
+            </span>
+          )}
 
-        {selectedLayer && selectedLayer.deletable === false && (
-          <span className="flex items-center gap-1 text-[10px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200" title="Non-deletable ERP layer">
-            <ShieldCheck className="w-3 h-3" /> Protected
-          </span>
-        )}
+          {selectedLayer && selectedLayer.deletable === false && (
+            <span className="flex items-center gap-1 text-[10px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200" title="Non-deletable ERP layer">
+              <ShieldCheck className="w-3 h-3" /> Protected
+            </span>
+          )}
+
+          <button
+            onClick={() => setIsCollapsed(true)}
+            className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+            title="Collapse Properties Panel"
+          >
+            <span className="text-xs font-mono font-bold">✕</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Body */}
