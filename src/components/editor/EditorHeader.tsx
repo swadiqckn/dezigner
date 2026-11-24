@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useEditorStore } from '@/store/useEditorStore';
 import { CANVAS_PRESETS } from '@/constants/canvasPresets';
 import {
@@ -13,6 +13,8 @@ import {
   Sparkles,
   ChevronDown,
   MoreVertical,
+  ArrowRightLeft,
+  Maximize2,
 } from 'lucide-react';
 
 export default function EditorHeader() {
@@ -37,6 +39,13 @@ export default function EditorHeader() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [customW, setCustomW] = useState(width);
+  const [customH, setCustomH] = useState(height);
+
+  useEffect(() => {
+    setCustomW(width);
+    setCustomH(height);
+  }, [width, height, sizeDropdownOpen]);
 
   return (
     <header className="h-14 md:h-16 w-full bg-white border-b border-slate-200 px-3 md:px-4 flex items-center justify-between select-none shrink-0 z-30">
@@ -126,11 +135,75 @@ export default function EditorHeader() {
         </button>
 
         {sizeDropdownOpen && (
-          <div className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 w-64 md:w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 py-1.5">
-              Select Poster Dimensions
+          <div className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 w-72 md:w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+            {/* Custom Canvas Size Inputs */}
+            <div className="p-2.5 bg-slate-50/90 rounded-xl border border-slate-200 mb-2">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700 flex items-center gap-1">
+                  <Maximize2 className="w-3 h-3 text-purple-600" />
+                  Custom Dimensions
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const temp = customW;
+                    setCustomW(customH);
+                    setCustomH(temp);
+                  }}
+                  className="p-1 text-slate-400 hover:text-purple-600 hover:bg-white rounded transition-colors"
+                  title="Swap Width and Height (Flip Orientation)"
+                >
+                  <ArrowRightLeft className="w-3 h-3" />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1.5 mb-2.5">
+                <div className="flex-1">
+                  <span className="text-[9px] text-slate-500 font-medium block mb-0.5">Width (px)</span>
+                  <input
+                    type="number"
+                    min={100}
+                    max={10000}
+                    value={customW}
+                    onChange={(e) => setCustomW(Math.max(10, Number(e.target.value) || 0))}
+                    className="w-full text-xs font-semibold text-slate-900 px-2 py-1.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-purple-600"
+                  />
+                </div>
+                <span className="text-slate-400 text-xs mt-3.5">×</span>
+                <div className="flex-1">
+                  <span className="text-[9px] text-slate-500 font-medium block mb-0.5">Height (px)</span>
+                  <input
+                    type="number"
+                    min={100}
+                    max={10000}
+                    value={customH}
+                    onChange={(e) => setCustomH(Math.max(10, Number(e.target.value) || 0))}
+                    className="w-full text-xs font-semibold text-slate-900 px-2 py-1.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-purple-600"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (customW > 0 && customH > 0) {
+                    setCanvasSize(customW, customH, `Custom (${customW} × ${customH})`);
+                    setSizeDropdownOpen(false);
+                  }
+                }}
+                className="w-full py-1.5 bg-purple-600 hover:bg-purple-700 active:scale-[0.99] text-white text-xs font-bold rounded-lg shadow-xs transition-all flex items-center justify-center gap-1"
+              >
+                Apply Custom Size
+              </button>
             </div>
-            <div className="space-y-1">
+
+            {/* Predefined Templates Section */}
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-1 flex items-center justify-between">
+              <span>Standard Templates</span>
+              <span className="text-[9px] text-slate-400">Presets</span>
+            </div>
+
+            <div className="space-y-1 max-h-56 overflow-y-auto pr-0.5">
               {CANVAS_PRESETS.map((p) => (
                 <button
                   key={p.name}
