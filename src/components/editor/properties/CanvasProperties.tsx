@@ -33,14 +33,14 @@ export default function CanvasProperties() {
               setCanvasSize(found.width, found.height, found.name);
             }
           }}
-          className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-600 outline-none cursor-pointer"
+          className="w-full text-xs font-semibold text-slate-900 p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-600 outline-none cursor-pointer"
         >
           {CANVAS_PRESETS.map((p) => (
-            <option key={p.name} value={p.name}>
+            <option key={p.name} value={p.name} className="text-slate-900 bg-white">
               {p.name} ({p.width} × {p.height})
             </option>
           ))}
-          <option value="Custom">Custom Size...</option>
+          <option value="Custom" className="text-slate-900 bg-white">Custom Size...</option>
         </select>
       </div>
 
@@ -54,7 +54,7 @@ export default function CanvasProperties() {
             type="number"
             value={width}
             onChange={(e) => setCanvasSize(Number(e.target.value) || 1080, height, "Custom")}
-            className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none"
+            className="w-full text-xs font-semibold text-slate-900 p-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none"
           />
         </div>
         <div>
@@ -65,7 +65,7 @@ export default function CanvasProperties() {
             type="number"
             value={height}
             onChange={(e) => setCanvasSize(width, Number(e.target.value) || 1350, "Custom")}
-            className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none"
+            className="w-full text-xs font-semibold text-slate-900 p-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none"
           />
         </div>
       </div>

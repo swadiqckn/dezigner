@@ -77,7 +77,7 @@ export default function ImageProperties({ layer }: ImagePropertiesProps) {
             value={layer.width}
             disabled={layer.locked}
             onChange={(e) => handleUpdate({ width: Math.max(20, Number(e.target.value) || 20) })}
-            className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none"
+            className="w-full text-xs font-semibold text-slate-900 p-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none"
           />
         </div>
         <div>
@@ -89,7 +89,7 @@ export default function ImageProperties({ layer }: ImagePropertiesProps) {
             value={layer.height}
             disabled={layer.locked}
             onChange={(e) => handleUpdate({ height: Math.max(20, Number(e.target.value) || 20) })}
-            className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none"
+            className="w-full text-xs font-semibold text-slate-900 p-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none"
           />
         </div>
       </div>
@@ -106,7 +106,7 @@ export default function ImageProperties({ layer }: ImagePropertiesProps) {
             max={360}
             value={layer.rotation || 0}
             onChange={(e) => handleUpdate({ rotation: Number(e.target.value) || 0 })}
-            className="w-full text-xs bg-transparent outline-none"
+            className="w-full text-xs font-semibold text-slate-900 bg-transparent outline-none"
           />
         </div>
       </div>

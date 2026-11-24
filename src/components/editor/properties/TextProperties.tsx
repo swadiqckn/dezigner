@@ -44,7 +44,7 @@ export default function TextProperties({ layer }: TextPropertiesProps) {
           value={layer.text}
           disabled={layer.editable === false}
           onChange={(e) => handleUpdate({ text: e.target.value })}
-          className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-600 focus:ring-1 focus:ring-purple-600 outline-none resize-none disabled:bg-slate-100 disabled:text-slate-400"
+          className="w-full text-xs font-semibold text-slate-900 p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-600 focus:ring-1 focus:ring-purple-600 outline-none resize-none disabled:bg-slate-100 disabled:text-slate-400"
           placeholder="Enter text..."
         />
         {layer.editable === false && (
@@ -62,10 +62,10 @@ export default function TextProperties({ layer }: TextPropertiesProps) {
         <select
           value={layer.fontFamily}
           onChange={(e) => handleUpdate({ fontFamily: e.target.value })}
-          className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-600 outline-none cursor-pointer"
+          className="w-full text-xs font-semibold text-slate-900 p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-600 outline-none cursor-pointer"
         >
           {POPULAR_FONTS.map((font) => (
-            <option key={font.name} value={font.family}>
+            <option key={font.name} value={font.family} className="text-slate-900 bg-white">
               {font.name} ({font.sample})
             </option>
           ))}
@@ -84,7 +84,7 @@ export default function TextProperties({ layer }: TextPropertiesProps) {
             max={300}
             value={layer.fontSize}
             onChange={(e) => handleUpdate({ fontSize: Number(e.target.value) || 12 })}
-            className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-600 outline-none"
+            className="w-full text-xs font-semibold text-slate-900 p-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-600 outline-none"
           />
         </div>
 
@@ -100,7 +100,7 @@ export default function TextProperties({ layer }: TextPropertiesProps) {
               max={360}
               value={layer.rotation || 0}
               onChange={(e) => handleUpdate({ rotation: Number(e.target.value) || 0 })}
-              className="w-full text-xs bg-transparent outline-none"
+              className="w-full text-xs font-semibold text-slate-900 bg-transparent outline-none"
             />
           </div>
         </div>
@@ -239,7 +239,7 @@ export default function TextProperties({ layer }: TextPropertiesProps) {
             type="text"
             value={layer.color || '#000000'}
             onChange={(e) => handleUpdate({ color: e.target.value })}
-            className="flex-1 text-xs p-2 bg-slate-50 border border-slate-200 rounded-xl font-mono uppercase focus:bg-white focus:border-purple-600 outline-none"
+            className="flex-1 text-xs font-semibold text-slate-900 p-2 bg-slate-50 border border-slate-200 rounded-xl font-mono uppercase focus:bg-white focus:border-purple-600 outline-none"
           />
         </div>
 
