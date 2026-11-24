@@ -12,19 +12,43 @@ export default function MobileBottomNav() {
     isMobileDrawerOpen,
     setIsMobileDrawerOpen,
     setIsPropertiesDrawerOpen,
+    selectedLayerIds,
+    clearSelection,
+    isMobileTextTemplatesOpen,
+    setIsMobileTextTemplatesOpen,
+    setActiveMobileProperty,
   } = useEditorStore();
 
   const handleTabClick = (tabId: SidebarTab) => {
-    setActiveTab(tabId);
-    setIsPropertiesDrawerOpen(false);
-    setIsMobileDrawerOpen(true);
+    if (tabId === 'text') {
+      if (selectedLayerIds.length === 0) {
+        // Toggle text templates in the Second Rail
+        setIsMobileTextTemplatesOpen(!isMobileTextTemplatesOpen);
+        setIsMobileDrawerOpen(false);
+        setIsPropertiesDrawerOpen(false);
+        setActiveMobileProperty(null);
+      } else {
+        // Deselect layer and open Text templates rail
+        clearSelection();
+        setIsMobileTextTemplatesOpen(true);
+        setIsMobileDrawerOpen(false);
+        setIsPropertiesDrawerOpen(false);
+        setActiveMobileProperty(null);
+      }
+    } else {
+      setIsMobileTextTemplatesOpen(false);
+      setActiveTab(tabId);
+      setIsPropertiesDrawerOpen(false);
+      setIsMobileDrawerOpen(true);
+    }
   };
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 px-2 flex items-center justify-around z-40 select-none shadow-lg">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-white border-t border-slate-200 px-1 flex items-center justify-around z-40 select-none shadow-lg">
       {SIDEBAR_TABS.map((tab) => {
         const Icon = tab.icon;
-        const isActive = isMobileDrawerOpen && activeTab === tab.id;
+        const isTextActive = tab.id === 'text' && isMobileTextTemplatesOpen && selectedLayerIds.length === 0;
+        const isActive = (isMobileDrawerOpen && activeTab === tab.id) || isTextActive;
 
         return (
           <button
@@ -35,7 +59,7 @@ export default function MobileBottomNav() {
             }`}
           >
             <div className={`p-1 rounded-xl transition-colors ${isActive ? 'bg-purple-100' : ''}`}>
-              <Icon className="w-5 h-5" />
+              <Icon className="w-4 h-4" />
             </div>
             <span className="text-[10px] leading-tight mt-0.5">{tab.label}</span>
           </button>

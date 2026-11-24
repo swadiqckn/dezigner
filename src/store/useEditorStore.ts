@@ -59,6 +59,8 @@ interface EditorState {
   isPreviewModalOpen: boolean;
   isErpModalOpen: boolean;
   isShortcutsModalOpen: boolean;
+  activeMobileProperty: string | null;
+  isMobileTextTemplatesOpen: boolean;
 
   // ERP integration metadata
   erpMeta?: {
@@ -138,6 +140,8 @@ interface EditorState {
   setIsPreviewModalOpen: (open: boolean) => void;
   setIsErpModalOpen: (open: boolean) => void;
   setIsShortcutsModalOpen: (open: boolean) => void;
+  setActiveMobileProperty: (property: string | null) => void;
+  setIsMobileTextTemplatesOpen: (open: boolean) => void;
 }
 
 const DEFAULT_WIDTH = 1080;
@@ -194,6 +198,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
     isPreviewModalOpen: false,
     isErpModalOpen: false,
     isShortcutsModalOpen: false,
+    activeMobileProperty: null,
+    isMobileTextTemplatesOpen: false,
 
     erpMeta: undefined,
 
@@ -355,23 +361,26 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
 
     setSelectedLayerIds: (ids) => {
-      set({ selectedLayerIds: ids });
+      set({ 
+        selectedLayerIds: ids,
+        ...(ids.length > 0 ? { isMobileTextTemplatesOpen: false } : { activeMobileProperty: null })
+      });
     },
 
     toggleSelection: (id, multiSelect = false) => {
       set((state) => {
         if (!multiSelect) {
-          return { selectedLayerIds: [id] };
+          return { selectedLayerIds: [id], isMobileTextTemplatesOpen: false };
         }
         if (state.selectedLayerIds.includes(id)) {
           return { selectedLayerIds: state.selectedLayerIds.filter((selId) => selId !== id) };
         }
-        return { selectedLayerIds: [...state.selectedLayerIds, id] };
+        return { selectedLayerIds: [...state.selectedLayerIds, id], isMobileTextTemplatesOpen: false };
       });
     },
 
     clearSelection: () => {
-      set({ selectedLayerIds: [] });
+      set({ selectedLayerIds: [], activeMobileProperty: null });
     },
 
     selectAll: () => {
@@ -658,5 +667,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     setIsPreviewModalOpen: (isPreviewModalOpen) => set({ isPreviewModalOpen }),
     setIsErpModalOpen: (isErpModalOpen) => set({ isErpModalOpen }),
     setIsShortcutsModalOpen: (isShortcutsModalOpen) => set({ isShortcutsModalOpen }),
+    setActiveMobileProperty: (activeMobileProperty) => set({ activeMobileProperty }),
+    setIsMobileTextTemplatesOpen: (isMobileTextTemplatesOpen) => set({ isMobileTextTemplatesOpen }),
   };
 });

@@ -11,8 +11,9 @@ import PreviewModal from './modals/PreviewModal';
 import ErpDocsModal from './modals/ErpDocsModal';
 import KeyboardShortcutsModal from './modals/KeyboardShortcutsModal';
 import MobileBottomNav from './mobile/MobileBottomNav';
+import MobileSecondRail from './mobile/MobileSecondRail';
+import MobileThirdLayerSheet from './mobile/MobileThirdLayerSheet';
 import MobileDrawerSheet from './mobile/MobileDrawerSheet';
-import MobileContextToolbar from './mobile/MobileContextToolbar';
 import { useEditorStore } from '@/store/useEditorStore';
 import { parseERPConfig } from '@/utils/urlConfigParser';
 import { exportCanvas } from '@/utils/exportUtils';
@@ -134,13 +135,16 @@ export default function PosterEditor() {
         </div>
       </div>
 
-      {/* Mobile Floating Context Toolbar (when an object is selected) */}
-      <MobileContextToolbar />
+      {/* Mobile Second Rail (Properties & Text Templates) */}
+      <MobileSecondRail />
 
-      {/* Mobile Bottom Navigation Bar */}
+      {/* Mobile Third Layer Contextual Sheet (Triggered by Second Rail Icons) */}
+      <MobileThirdLayerSheet />
+
+      {/* Mobile Bottom Navigation Bar (1st Layer) */}
       <MobileBottomNav />
 
-      {/* Mobile Slide-up Drawer Sheet */}
+      {/* Mobile Slide-up Drawer Sheet (for Elements, Uploads, Background, etc.) */}
       <MobileDrawerSheet />
 
       {/* Modals */}
