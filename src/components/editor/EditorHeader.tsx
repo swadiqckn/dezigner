@@ -42,6 +42,8 @@ export default function EditorHeader() {
     erpMeta,
     getWorkFile,
     loadWorkFile,
+    bulkActiveIndex,
+    saveBulkOverride,
   } = useEditorStore();
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -53,8 +55,12 @@ export default function EditorHeader() {
   const workFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleSaveToCache = async () => {
-    const data = getWorkFile();
-    await saveProjectToCache(data);
+    if (bulkActiveIndex !== null) {
+      saveBulkOverride(bulkActiveIndex);
+    } else {
+      const data = getWorkFile();
+      await saveProjectToCache(data);
+    }
     setJustSaved(true);
     setTimeout(() => setJustSaved(false), 2000);
   };

@@ -110,9 +110,15 @@ export default function BulkGenerateModal({ stage }: BulkGenerateModalProps) {
     isBulkModalOpen,
     setIsBulkModalOpen,
     getTemplateVariables,
-    applyTemplateValues,
     title,
     layers,
+    bulkRows,
+    setBulkRows,
+    bulkOverrides,
+    bulkBaseLayers,
+    bulkActiveIndex,
+    enterBulkPreview,
+    goToBulkIndex,
   } = useEditorStore();
 
   const templateVars = getTemplateVariables();
@@ -126,6 +132,14 @@ export default function BulkGenerateModal({ stage }: BulkGenerateModalProps) {
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [copiedSchema, setCopiedSchema] = useState(false);
   const csvInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleDone = () => {
+    setBulkRows(rows);
+    if (rows.length > 0) {
+      enterBulkPreview(bulkActiveIndex ?? 0);
+    }
+    setIsBulkModalOpen(false);
+  };
 
   const handleCSVTextChange = (val: string) => {
     setCsvInput(val);
@@ -170,17 +184,22 @@ export default function BulkGenerateModal({ stage }: BulkGenerateModalProps) {
     URL.revokeObjectURL(url);
   };
 
-  // Initialize default row from placeholder values when modal opens
+  // Initialize default row from placeholder values or existing bulkRows when modal opens
   useEffect(() => {
-    if (isBulkModalOpen && templateVars.length > 0 && rows.length === 0) {
-      const initialRow: Record<string, string> = {};
-      templateVars.forEach((v) => {
-        initialRow[v.id] = v.value;
-      });
-      setRows([initialRow]);
-      setJsonInput(JSON.stringify([initialRow], null, 2));
+    if (isBulkModalOpen && templateVars.length > 0) {
+      if (bulkRows.length > 0 && rows.length === 0) {
+        setRows(bulkRows);
+        setJsonInput(JSON.stringify(bulkRows, null, 2));
+      } else if (rows.length === 0) {
+        const initialRow: Record<string, string> = {};
+        templateVars.forEach((v) => {
+          initialRow[v.id] = v.value;
+        });
+        setRows([initialRow]);
+        setJsonInput(JSON.stringify([initialRow], null, 2));
+      }
     }
-  }, [isBulkModalOpen, templateVars, rows.length]);
+  }, [isBulkModalOpen, templateVars, rows.length, bulkRows]);
 
   if (!isBulkModalOpen) return null;
 
@@ -229,39 +248,46 @@ export default function BulkGenerateModal({ stage }: BulkGenerateModalProps) {
 
     setIsGenerating(true);
     setProgress({ current: 0, total: rows.length });
+    setBulkRows(rows);
 
-    // Save original values to restore after batch export
-    const originalValues: Record<string, string> = {};
-    templateVars.forEach((v) => {
-      const layer = layers.find((l) => (l.templateId || l.id) === v.id);
-      if (layer) {
-        originalValues[v.id] =
-          layer.type === 'text'
-            ? (layer as any).text
-            : layer.type === 'image'
-            ? (layer as any).src
-            : (layer as any).iconName || '';
-      }
-    });
+    const baseTemplate = bulkBaseLayers || JSON.parse(JSON.stringify(layers));
+    const prevActiveIdx = bulkActiveIndex;
 
     try {
       for (let i = 0; i < rows.length; i++) {
         setProgress({ current: i + 1, total: rows.length });
         const rowData = rows[i];
 
-        // 1. Preload any external image URLs in this row
+        // 1. Preload any external image URLs in this row (or in override layers)
+        const overrideForRow = bulkOverrides[i];
         const imageUrls = templateVars
           .filter((v) => v.type === 'image' && rowData[v.id])
           .map((v) => rowData[v.id]);
         await Promise.all(imageUrls.map((url) => preloadImageUrl(url)));
 
-        // 2. Inject values into canvas layers
-        applyTemplateValues(rowData);
+        // 2. Use saved override version for changed entries, or generate directly from base template
+        if (overrideForRow) {
+          useEditorStore.setState({ layers: JSON.parse(JSON.stringify(overrideForRow)) });
+        } else {
+          const injectedLayers = (JSON.parse(JSON.stringify(baseTemplate)) as typeof layers).map((l) => {
+            if (!l.isTemplate) return l;
+            const key = l.templateId || l.id;
+            if (!(key in rowData)) return l;
+            const val = rowData[key];
+            if (l.type === 'text') return { ...l, text: val };
+            if (l.type === 'image') return { ...l, src: val };
+            if (l.type === 'icon') {
+              return { ...l, iconName: val, svgString: val.startsWith('M') ? val : (l as any).svgString };
+            }
+            return l;
+          });
+          useEditorStore.setState({ layers: injectedLayers });
+        }
 
         // 3. Wait for React-Konva re-render & image paint
         await new Promise((resolve) => setTimeout(resolve, 550));
 
-        // 3. Export canvas file
+        // 4. Export canvas file
         const firstVal = Object.values(rowData)[0] || `${i + 1}`;
         const safeSuffix = String(firstVal)
           .replace(/[^a-z0-9-_]/gi, '_')
@@ -276,8 +302,12 @@ export default function BulkGenerateModal({ stage }: BulkGenerateModalProps) {
         });
       }
     } finally {
-      // Restore original values
-      applyTemplateValues(originalValues);
+      // Restore active preview entry or original base template
+      if (prevActiveIdx !== null && prevActiveIdx >= 0 && prevActiveIdx < rows.length) {
+        goToBulkIndex(prevActiveIdx);
+      } else {
+        useEditorStore.setState({ layers: JSON.parse(JSON.stringify(baseTemplate)) });
+      }
       setIsGenerating(false);
     }
   };
@@ -515,25 +545,35 @@ export default function BulkGenerateModal({ stage }: BulkGenerateModalProps) {
             ))}
           </div>
 
-          <button
-            onClick={handleBulkGenerate}
-            disabled={isGenerating || templateVars.length === 0 || rows.length === 0}
-            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-2 transition-all active:scale-95"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>
-                  Generating {progress.current} / {progress.total}...
-                </span>
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4" />
-                <span>Generate {rows.length} {rows.length === 1 ? 'File' : 'Files'}</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDone}
+              className="px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition-all active:scale-95"
+              title="Apply rows to canvas preview and close window"
+            >
+              Done
+            </button>
+
+            <button
+              onClick={handleBulkGenerate}
+              disabled={isGenerating || templateVars.length === 0 || rows.length === 0}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-2 transition-all active:scale-95"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>
+                    Generating {progress.current} / {progress.total}...
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>Generate {rows.length} {rows.length === 1 ? 'File' : 'Files'}</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

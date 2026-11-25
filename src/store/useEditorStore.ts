@@ -69,6 +69,12 @@ interface EditorState {
   activeMobileProperty: string | null;
   isMobileTextTemplatesOpen: boolean;
 
+  // Bulk Preview & Per-Entry Override Cache
+  bulkRows: Array<Record<string, string>>;
+  bulkActiveIndex: number | null;
+  bulkBaseLayers: CanvasLayer[] | null;
+  bulkOverrides: Record<number, CanvasLayer[]>;
+
   // ERP integration metadata
   erpMeta?: {
     tenantId?: string;
@@ -160,6 +166,12 @@ interface EditorState {
   setIsBulkModalOpen: (open: boolean) => void;
   applyTemplateValues: (values: Record<string, string>) => void;
   getTemplateVariables: () => TemplateLayerVariable[];
+  setBulkRows: (rows: Array<Record<string, string>>) => void;
+  enterBulkPreview: (index?: number) => void;
+  exitBulkPreview: () => void;
+  goToBulkIndex: (index: number) => void;
+  saveBulkOverride: (index?: number) => void;
+  clearBulkOverride: (index: number) => void;
   setActiveMobileProperty: (property: string | null) => void;
   setIsMobileTextTemplatesOpen: (open: boolean) => void;
 }
@@ -221,6 +233,10 @@ export const useEditorStore = create<EditorState>((set, get) => {
     isBulkModalOpen: false,
     activeMobileProperty: null,
     isMobileTextTemplatesOpen: false,
+    bulkRows: [],
+    bulkActiveIndex: null,
+    bulkBaseLayers: null,
+    bulkOverrides: {},
     customFonts: [],
 
     erpMeta: undefined,
@@ -824,6 +840,96 @@ export const useEditorStore = create<EditorState>((set, get) => {
               ? (l as any).src
               : (l as any).iconName || ''),
         }));
+    },
+    setBulkRows: (rows) => {
+      set({ bulkRows: rows });
+    },
+    enterBulkPreview: (index = 0) => {
+      const { bulkRows, bulkBaseLayers, layers } = get();
+      if (bulkRows.length === 0) return;
+      const base = bulkBaseLayers || JSON.parse(JSON.stringify(layers));
+      if (!bulkBaseLayers) {
+        set({ bulkBaseLayers: base });
+      }
+      get().goToBulkIndex(Math.max(0, Math.min(index, bulkRows.length - 1)));
+    },
+    exitBulkPreview: () => {
+      const { bulkBaseLayers } = get();
+      if (bulkBaseLayers) {
+        set({
+          layers: JSON.parse(JSON.stringify(bulkBaseLayers)),
+          bulkActiveIndex: null,
+          bulkBaseLayers: null,
+          selectedLayerIds: [],
+        });
+      } else {
+        set({ bulkActiveIndex: null });
+      }
+    },
+    goToBulkIndex: (index) => {
+      const { bulkRows, bulkBaseLayers, bulkOverrides, layers } = get();
+      if (index < 0 || index >= bulkRows.length) return;
+      const base = bulkBaseLayers || JSON.parse(JSON.stringify(layers));
+      const rowData = bulkRows[index];
+      const overrideLayers = bulkOverrides[index];
+
+      let nextLayers: CanvasLayer[];
+      if (overrideLayers) {
+        nextLayers = JSON.parse(JSON.stringify(overrideLayers));
+      } else {
+        nextLayers = (JSON.parse(JSON.stringify(base)) as CanvasLayer[]).map((l) => {
+          if (!l.isTemplate) return l;
+          const key = l.templateId || l.id;
+          if (!(key in rowData)) return l;
+          const val = rowData[key];
+          if (l.type === 'text') return { ...l, text: val };
+          if (l.type === 'image') return { ...l, src: val };
+          if (l.type === 'icon') {
+            return { ...l, iconName: val, svgString: val.startsWith('M') ? val : (l as any).svgString };
+          }
+          return l;
+        });
+      }
+
+      set({
+        bulkBaseLayers: base,
+        bulkActiveIndex: index,
+        layers: nextLayers,
+        selectedLayerIds: [],
+      });
+    },
+    saveBulkOverride: (index) => {
+      const { bulkActiveIndex, layers, bulkOverrides } = get();
+      const targetIdx = index ?? bulkActiveIndex;
+      if (targetIdx === null || targetIdx === undefined) return;
+      const nextOverrides = {
+        ...bulkOverrides,
+        [targetIdx]: JSON.parse(JSON.stringify(layers)),
+      };
+      set({ bulkOverrides: nextOverrides });
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('dezigner_bulk_overrides_v1', JSON.stringify(nextOverrides));
+        } catch {
+          // ignore storage quota errors for large base64 overrides
+        }
+      }
+    },
+    clearBulkOverride: (index) => {
+      const { bulkOverrides, bulkActiveIndex } = get();
+      const nextOverrides = { ...bulkOverrides };
+      delete nextOverrides[index];
+      set({ bulkOverrides: nextOverrides });
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('dezigner_bulk_overrides_v1', JSON.stringify(nextOverrides));
+        } catch {
+          // ignore
+        }
+      }
+      if (bulkActiveIndex === index) {
+        get().goToBulkIndex(index);
+      }
     },
     setActiveMobileProperty: (activeMobileProperty) => set({ activeMobileProperty }),
     setIsMobileTextTemplatesOpen: (isMobileTextTemplatesOpen) => set({ isMobileTextTemplatesOpen }),

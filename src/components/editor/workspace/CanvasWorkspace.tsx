@@ -14,6 +14,12 @@ import {
   Unlock,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  Save,
+  RotateCcw,
+  X,
+  Check,
 } from 'lucide-react';
 
 // Dynamic import with SSR disabled for Konva canvas engine
@@ -37,6 +43,7 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [isZoomCollapsed, setIsZoomCollapsed] = useState(false);
+  const [savedOverrideIdx, setSavedOverrideIdx] = useState<number | null>(null);
 
   // Touch tracking for mobile pinch & pan
   const [touchDistance, setTouchDistance] = useState<number | null>(null);
@@ -62,6 +69,13 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
     addLayer,
     selectedLayerIds,
     isMobileTextTemplatesOpen,
+    bulkRows,
+    bulkActiveIndex,
+    bulkOverrides,
+    goToBulkIndex,
+    saveBulkOverride,
+    clearBulkOverride,
+    exitBulkPreview,
   } = useEditorStore();
 
   // Spacebar panning detection
@@ -273,6 +287,92 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
           <Sparkles className="w-3.5 h-3.5" />
         </button>
       </div>
+
+      {/* Bottom-Center Bulk Preview & Override Navigator (when CSV / bulk data is loaded) */}
+      {bulkRows.length > 0 && bulkActiveIndex !== null && (
+        <div
+          className={`absolute ${
+            selectedLayerIds.length > 0 || isMobileTextTemplatesOpen
+              ? 'bottom-16 md:bottom-4'
+              : 'bottom-3 md:bottom-4'
+          } left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-md px-2 py-1 rounded-2xl shadow-lg border border-indigo-200 select-none`}
+        >
+          <button
+            onClick={() => goToBulkIndex(bulkActiveIndex - 1)}
+            disabled={bulkActiveIndex <= 0}
+            title="Previous Entry"
+            className="p-1.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-30 rounded-xl transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          <div className="px-1.5 flex items-center gap-1.5">
+            <span className="text-[11px] font-bold font-mono text-slate-800">
+              {bulkActiveIndex + 1} / {bulkRows.length}
+            </span>
+            {bulkOverrides[bulkActiveIndex] && (
+              <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                Edited
+              </span>
+            )}
+          </div>
+
+          <button
+            onClick={() => goToBulkIndex(bulkActiveIndex + 1)}
+            disabled={bulkActiveIndex >= bulkRows.length - 1}
+            title="Next Entry"
+            className="p-1.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-30 rounded-xl transition-colors"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+
+          <div className="h-4 w-[1px] bg-slate-200 mx-0.5" />
+
+          <button
+            onClick={() => {
+              saveBulkOverride(bulkActiveIndex);
+              setSavedOverrideIdx(bulkActiveIndex);
+              setTimeout(() => setSavedOverrideIdx(null), 1800);
+            }}
+            title="Save corrections for this entry only in cache (does not change original template)"
+            className={`flex items-center gap-1 px-2 py-1 rounded-xl text-[11px] font-bold transition-all ${
+              savedOverrideIdx === bulkActiveIndex
+                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
+            }`}
+          >
+            {savedOverrideIdx === bulkActiveIndex ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Saved</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-3.5 h-3.5" />
+                <span>Save</span>
+              </>
+            )}
+          </button>
+
+          {bulkOverrides[bulkActiveIndex] && (
+            <button
+              onClick={() => clearBulkOverride(bulkActiveIndex)}
+              title="Reset this entry back to original template"
+              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          <button
+            onClick={exitBulkPreview}
+            title="Exit Bulk Preview & return to original template"
+            className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Floating Canvas Lock & Zoom Controls (Positioned at bottom with Collapsible Arrow Toggle) */}
       <div 
