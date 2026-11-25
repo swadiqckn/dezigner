@@ -61,7 +61,15 @@ export async function exportCanvas(
       });
 
       pdf.addImage(dataUrl, "PNG", 0, 0, width, height, undefined, "FAST");
-      pdf.save(`${filename}.pdf`);
+      const pdfBlob = pdf.output("blob");
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `${filename}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
       return dataUrl;
     }
 
