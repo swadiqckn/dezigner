@@ -17,6 +17,7 @@ import {
   Maximize2,
   Save,
   FolderOpen,
+  Braces,
 } from 'lucide-react';
 
 export default function EditorHeader() {
@@ -35,6 +36,7 @@ export default function EditorHeader() {
     setIsPreviewModalOpen,
     setIsErpModalOpen,
     setIsShortcutsModalOpen,
+    setIsBulkModalOpen,
     erpMeta,
     getWorkFile,
     loadWorkFile,
@@ -320,6 +322,16 @@ export default function EditorHeader() {
           <Keyboard className="w-4 h-4" />
         </button>
 
+        {/* Desktop Bulk Generate Button */}
+        <button
+          onClick={() => setIsBulkModalOpen(true)}
+          className="hidden md:flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 rounded-xl text-xs font-bold transition-colors"
+          title="Template Variables & Bulk Poster Generator"
+        >
+          <Braces className="w-4 h-4 text-indigo-600" />
+          <span>Bulk</span>
+        </button>
+
         {/* Desktop Preview */}
         <button
           onClick={() => setIsPreviewModalOpen(true)}
@@ -361,6 +373,16 @@ export default function EditorHeader() {
                 <span>Save Work File</span>
               </button>
               <div className="h-[1px] bg-slate-100 my-1" />
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setIsBulkModalOpen(true);
+                }}
+                className="w-full text-left p-2 rounded-xl text-xs font-medium text-indigo-700 hover:bg-indigo-50 flex items-center gap-2"
+              >
+                <Braces className="w-4 h-4 text-indigo-600" />
+                <span>Bulk Generate</span>
+              </button>
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);

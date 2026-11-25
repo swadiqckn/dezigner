@@ -9,6 +9,7 @@ import {
   GroupLayer,
   CustomFontItem,
   ProjectWorkFile,
+  TemplateLayerVariable,
 } from '@/types/editor';
 import { POSTER_TEMPLATES } from '@/constants/templates';
 
@@ -62,6 +63,7 @@ interface EditorState {
   isPreviewModalOpen: boolean;
   isErpModalOpen: boolean;
   isShortcutsModalOpen: boolean;
+  isBulkModalOpen: boolean;
   activeMobileProperty: string | null;
   isMobileTextTemplatesOpen: boolean;
 
@@ -153,6 +155,9 @@ interface EditorState {
   setIsPreviewModalOpen: (open: boolean) => void;
   setIsErpModalOpen: (open: boolean) => void;
   setIsShortcutsModalOpen: (open: boolean) => void;
+  setIsBulkModalOpen: (open: boolean) => void;
+  applyTemplateValues: (values: Record<string, string>) => void;
+  getTemplateVariables: () => TemplateLayerVariable[];
   setActiveMobileProperty: (property: string | null) => void;
   setIsMobileTextTemplatesOpen: (open: boolean) => void;
 }
@@ -211,6 +216,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     isPreviewModalOpen: false,
     isErpModalOpen: false,
     isShortcutsModalOpen: false,
+    isBulkModalOpen: false,
     activeMobileProperty: null,
     isMobileTextTemplatesOpen: false,
     customFonts: [],
@@ -781,6 +787,42 @@ export const useEditorStore = create<EditorState>((set, get) => {
     setIsPreviewModalOpen: (isPreviewModalOpen) => set({ isPreviewModalOpen }),
     setIsErpModalOpen: (isErpModalOpen) => set({ isErpModalOpen }),
     setIsShortcutsModalOpen: (isShortcutsModalOpen) => set({ isShortcutsModalOpen }),
+    setIsBulkModalOpen: (isBulkModalOpen) => set({ isBulkModalOpen }),
+    applyTemplateValues: (values) => {
+      pushSnapshot();
+      set((state) => ({
+        layers: state.layers.map((l) => {
+          if (!l.isTemplate) return l;
+          const key = l.templateId || l.id;
+          if (!(key in values)) return l;
+          const val = values[key];
+          if (l.type === 'text') {
+            return { ...l, text: val };
+          } else if (l.type === 'image') {
+            return { ...l, src: val };
+          } else if (l.type === 'icon') {
+            return { ...l, iconName: val, svgString: val.startsWith('M') ? val : (l as any).svgString };
+          }
+          return l;
+        }),
+      }));
+    },
+    getTemplateVariables: () => {
+      const { layers } = get();
+      return layers
+        .filter((l) => l.isTemplate && ['text', 'image', 'icon'].includes(l.type))
+        .map((l) => ({
+          id: l.templateId || l.id,
+          type: (l.templateType || l.type) as 'text' | 'image' | 'icon',
+          value:
+            l.placeholderValue ??
+            (l.type === 'text'
+              ? (l as any).text
+              : l.type === 'image'
+              ? (l as any).src
+              : (l as any).iconName || ''),
+        }));
+    },
     setActiveMobileProperty: (activeMobileProperty) => set({ activeMobileProperty }),
     setIsMobileTextTemplatesOpen: (isMobileTextTemplatesOpen) => set({ isMobileTextTemplatesOpen }),
   };

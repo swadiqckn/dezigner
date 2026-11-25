@@ -41,6 +41,17 @@ export interface BaseLayer {
   editable?: boolean; // Cannot edit text/properties if false
   selectable?: boolean; // Cannot be selected if false
   zIndex?: number;
+  // Template variable metadata for bulk generation & recurring usage
+  isTemplate?: boolean;
+  templateId?: string;
+  templateType?: 'text' | 'image' | 'icon';
+  placeholderValue?: string;
+}
+
+export interface TemplateLayerVariable {
+  id: string;
+  type: 'text' | 'image' | 'icon';
+  value: string;
 }
 
 export interface TextLayer extends BaseLayer {

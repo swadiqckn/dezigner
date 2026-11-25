@@ -7,6 +7,7 @@ import ImageProperties from './ImageProperties';
 import ShapeProperties from './ShapeProperties';
 import CanvasProperties from './CanvasProperties';
 import ArrangeControls from './ArrangeControls';
+import TemplateLayerSection from './TemplateLayerSection';
 import { TextLayer, ImageLayer, ShapeLayer } from '@/types/editor';
 import { 
   Sliders, 
@@ -99,6 +100,7 @@ export default function PropertiesPanel() {
             {['rect', 'circle', 'star', 'line', 'polygon', 'badge', 'icon'].includes(selectedLayer.type) && (
               <ShapeProperties layer={selectedLayer as ShapeLayer} />
             )}
+            <TemplateLayerSection layer={selectedLayer} />
             <ArrangeControls />
           </>
         ) : (

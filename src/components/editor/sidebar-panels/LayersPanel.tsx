@@ -174,6 +174,14 @@ export default function LayersPanel() {
                       >
                         {layer.name}
                       </span>
+                      {layer.isTemplate && (
+                        <span
+                          className="text-[9px] font-mono font-bold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded shrink-0"
+                          title={`Template Variable: ${layer.templateId || layer.id}`}
+                        >
+                          {'{'}T{'}'}
+                        </span>
+                      )}
                       {isProtected && (
                         <span
                           title="Protected ERP Layer (Non-deletable)"

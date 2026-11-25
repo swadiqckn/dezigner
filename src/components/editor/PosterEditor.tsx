@@ -10,6 +10,7 @@ import ExportModal from './modals/ExportModal';
 import PreviewModal from './modals/PreviewModal';
 import ErpDocsModal from './modals/ErpDocsModal';
 import KeyboardShortcutsModal from './modals/KeyboardShortcutsModal';
+import BulkGenerateModal from './modals/BulkGenerateModal';
 import MobileBottomNav from './mobile/MobileBottomNav';
 import MobileSecondRail from './mobile/MobileSecondRail';
 import MobileThirdLayerSheet from './mobile/MobileThirdLayerSheet';
@@ -22,7 +23,7 @@ import { ShieldCheck, X } from 'lucide-react';
 export default function PosterEditor() {
   const [stageInstance, setStageInstance] = useState<Konva.Stage | null>(null);
   const [showInjectedBanner, setShowInjectedBanner] = useState(false);
-  const { loadFromConfig, resetZoomPan, erpMeta } = useEditorStore();
+  const { loadFromConfig, resetZoomPan, erpMeta, applyTemplateValues } = useEditorStore();
 
   // 1. Initial responsive zoom calculation
   useEffect(() => {
@@ -64,6 +65,8 @@ export default function PosterEditor() {
       if (data.type === 'INJECT_CONFIG' && data.payload) {
         loadFromConfig(data.payload);
         setShowInjectedBanner(true);
+      } else if (data.type === 'INJECT_TEMPLATE_VALUES' && data.payload) {
+        applyTemplateValues(data.payload);
       } else if (data.type === 'TRIGGER_EXPORT' && stageInstance) {
         const format = data.payload?.format || 'png';
         const scale = data.payload?.scale || 2;
@@ -152,6 +155,7 @@ export default function PosterEditor() {
       <PreviewModal stage={stageInstance} />
       <ErpDocsModal />
       <KeyboardShortcutsModal />
+      <BulkGenerateModal stage={stageInstance} />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import MovementControls from '../properties/MovementControls';
 import AnchorSelector from '../properties/AnchorSelector';
 import ScaleControls from '../properties/ScaleControls';
 import FontSelector from '../properties/FontSelector';
+import TemplateLayerSection from '../properties/TemplateLayerSection';
 import { 
   X, 
   Bold, 
@@ -127,6 +128,8 @@ export default function MobileThirdLayerSheet() {
         return 'Scale X & Y';
       case 'anchor':
         return 'Anchor Point';
+      case 'template':
+        return 'Template Variable';
       case 'radius':
         return 'Corner Radius';
       case 'opacity':
@@ -731,6 +734,13 @@ export default function MobileThirdLayerSheet() {
           {activeMobileProperty === 'anchor' && layer && (
             <div className="space-y-3">
               <AnchorSelector layerId={layer.id} />
+            </div>
+          )}
+
+          {/* 17. TEMPLATE VARIABLE */}
+          {activeMobileProperty === 'template' && layer && (
+            <div className="space-y-3">
+              <TemplateLayerSection layer={layer} />
             </div>
           )}
         </div>

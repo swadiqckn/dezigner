@@ -24,6 +24,7 @@ import {
   Move,
   Crosshair,
   Maximize2,
+  Braces,
 } from 'lucide-react';
 
 export default function MobileSecondRail() {
@@ -573,6 +574,22 @@ export default function MobileSecondRail() {
           <Crosshair className="w-4 h-4" />
           <span className="text-[9px] mt-0.5 leading-none">Anchor</span>
         </button>
+
+        {/* TEMPLATE VARIABLE (Text, Image, Icon only) */}
+        {['text', 'image', 'icon'].includes(primaryLayer.type) && (
+          <button
+            onClick={() => toggleProperty('template')}
+            className={`p-2 rounded-xl flex flex-col items-center justify-center transition-all ${
+              activeMobileProperty === 'template' || primaryLayer.isTemplate
+                ? 'bg-indigo-100 text-indigo-700 shadow-xs font-bold'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+            title="Template Variable"
+          >
+            <Braces className="w-4 h-4" />
+            <span className="text-[9px] mt-0.5 leading-none">Template</span>
+          </button>
+        )}
 
         {/* LAYERS & POSITION (Shows layer order, duplicate, lock options in 3rd layer) */}
         <button
