@@ -13,6 +13,7 @@ import {
 } from '@/types/editor';
 import { POSTER_TEMPLATES } from '@/constants/templates';
 import { getAlignedPosition } from '@/utils/transformUtils';
+import { loadGoogleFont } from '@/constants/fonts';
 
 interface HistorySnapshot {
   layers: CanvasLayer[];
@@ -741,6 +742,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     loadWorkFile: (file) => {
       pushSnapshot();
+      // Load Google Fonts used by text layers in the work file
+      if (Array.isArray(file.layers)) {
+        file.layers.forEach((l) => {
+          if (l.type === 'text' && (l as any).fontFamily) {
+            loadGoogleFont((l as any).fontFamily);
+          }
+        });
+      }
       if (file.customFonts && typeof document !== 'undefined') {
         file.customFonts.forEach(async (f) => {
           if (f.dataUrl) {

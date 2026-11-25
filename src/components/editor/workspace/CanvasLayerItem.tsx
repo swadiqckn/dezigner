@@ -16,6 +16,7 @@ import {
 import Konva from 'konva';
 import { CanvasLayer, TextLayer, ImageLayer, ShapeLayer, IconLayer, BadgeLayer, GroupLayer } from '@/types/editor';
 import { getOffsetForAnchor, getLayerDimensions } from '@/utils/transformUtils';
+import { loadGoogleFont } from '@/constants/fonts';
 
 interface CanvasLayerItemProps {
   layer: CanvasLayer;
@@ -332,6 +333,30 @@ const RenderTextLayer = React.forwardRef<
     onDblClick?: () => void;
   }
 >(({ layer, isDraggable, onSelect, onTransformEnd, onDragMove, onDragEnd, onDblClick }, ref) => {
+  const [, setFontTick] = useState(0);
+
+  // Ensure Google Font is loaded and re-measure/redraw once font faces finish loading
+  useEffect(() => {
+    if (layer.fontFamily) {
+      loadGoogleFont(layer.fontFamily);
+    }
+    if (typeof document === 'undefined' || !('fonts' in document)) return;
+
+    let cancelled = false;
+    const handleFontsReady = () => {
+      if (!cancelled) {
+        setFontTick((t) => t + 1);
+      }
+    };
+
+    document.fonts.ready.then(handleFontsReady);
+    document.fonts.addEventListener?.('loadingdone', handleFontsReady);
+    return () => {
+      cancelled = true;
+      document.fonts.removeEventListener?.('loadingdone', handleFontsReady);
+    };
+  }, [layer.fontFamily, layer.text, layer.fontSize]);
+
   let fontStyleString = 'normal';
   if (layer.fontWeight && layer.fontStyle === 'italic') {
     fontStyleString = `${layer.fontWeight} italic`;
