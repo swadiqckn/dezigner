@@ -48,26 +48,80 @@ export const POPULAR_FONTS: FontOption[] = [
   { name: 'Fira Code', family: "'Fira Code', monospace", category: 'monospace', sample: 'Developer Mono' },
 ];
 
-const loadedGoogleFonts = new Set<string>();
+const fontLoadPromises = new Map<string, Promise<boolean>>();
+const readyGoogleFonts = new Set<string>();
+
+export function isGoogleFontReady(fontName: string): boolean {
+  if (!fontName) return false;
+  const cleanName = fontName.replace(/['"]/g, '').split(',')[0].trim();
+  if (readyGoogleFonts.has(cleanName)) return true;
+  if (typeof document !== 'undefined' && 'fonts' in document) {
+    try {
+      return document.fonts.check(`16px "${cleanName}"`);
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
 
 /**
- * Dynamically load any Google Font by name into the browser document
+ * Dynamically load any Google Font by name into the browser document.
+ * Returns a Promise<boolean> that resolves when the font face is downloaded and ready.
  */
-export function loadGoogleFont(fontName: string) {
-  if (typeof document === 'undefined' || !fontName) return;
+export function loadGoogleFont(fontName: string): Promise<boolean> {
+  if (typeof document === 'undefined' || !fontName) return Promise.resolve(false);
   const cleanName = fontName.replace(/['"]/g, '').split(',')[0].trim();
-  if (!cleanName || loadedGoogleFonts.has(cleanName)) return;
+  if (!cleanName) return Promise.resolve(false);
 
-  loadedGoogleFonts.add(cleanName);
-  const formatted = cleanName.replace(/\s+/g, '+');
+  if (readyGoogleFonts.has(cleanName)) return Promise.resolve(true);
+  const existingPromise = fontLoadPromises.get(cleanName);
+  if (existingPromise) return existingPromise;
+
+  const formatted = encodeURIComponent(cleanName).replace(/%20/g, '+');
   const linkId = `gf-${formatted}`;
-  if (!document.getElementById(linkId)) {
+
+  const promise = new Promise<boolean>((resolve) => {
+    const finishLoad = () => {
+      if ('fonts' in document) {
+        Promise.allSettled([
+          document.fonts.load(`400 16px "${cleanName}"`),
+          document.fonts.load(`700 16px "${cleanName}"`),
+        ]).then(() => {
+          readyGoogleFonts.add(cleanName);
+          resolve(true);
+        });
+      } else {
+        readyGoogleFonts.add(cleanName);
+        resolve(true);
+      }
+    };
+
+    const existingLink = document.getElementById(linkId) as HTMLLinkElement | null;
+    if (existingLink) {
+      finishLoad();
+      return;
+    }
+
     const link = document.createElement('link');
     link.id = linkId;
     link.rel = 'stylesheet';
-    link.href = `https://fonts.googleapis.com/css2?family=${formatted}:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,700&display=swap`;
+    // Try weights 400;700 first; if font is single-weight or variable-only and 400s, fallback to plain family
+    link.href = `https://fonts.googleapis.com/css2?family=${formatted}:wght@400;700&display=swap`;
+    link.onload = finishLoad;
+    link.onerror = () => {
+      if (!link.dataset.fallback) {
+        link.dataset.fallback = '1';
+        link.href = `https://fonts.googleapis.com/css2?family=${formatted}&display=swap`;
+      } else {
+        resolve(false);
+      }
+    };
     document.head.appendChild(link);
-  }
+  });
+
+  fontLoadPromises.set(cleanName, promise);
+  return promise;
 }
 
 export const GOOGLE_FONTS_URL = 

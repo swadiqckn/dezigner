@@ -337,17 +337,17 @@ const RenderTextLayer = React.forwardRef<
 
   // Ensure Google Font is loaded and re-measure/redraw once font faces finish loading
   useEffect(() => {
-    if (layer.fontFamily) {
-      loadGoogleFont(layer.fontFamily);
-    }
-    if (typeof document === 'undefined' || !('fonts' in document)) return;
-
     let cancelled = false;
     const handleFontsReady = () => {
       if (!cancelled) {
         setFontTick((t) => t + 1);
       }
     };
+
+    if (layer.fontFamily) {
+      loadGoogleFont(layer.fontFamily).then(handleFontsReady);
+    }
+    if (typeof document === 'undefined' || !('fonts' in document)) return;
 
     document.fonts.ready.then(handleFontsReady);
     document.fonts.addEventListener?.('loadingdone', handleFontsReady);

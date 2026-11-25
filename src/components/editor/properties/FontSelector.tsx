@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useEditorStore } from '@/store/useEditorStore';
-import { POPULAR_FONTS, loadGoogleFont } from '@/constants/fonts';
+import { POPULAR_FONTS, loadGoogleFont, isGoogleFontReady } from '@/constants/fonts';
 import { Upload, Search, Sparkles, Check, Loader2 } from 'lucide-react';
 
 interface FontSelectorProps {
@@ -31,16 +31,23 @@ function FontPreviewRow({
   onSelect: () => void;
 }) {
   const rowRef = useRef<HTMLButtonElement | null>(null);
+  const [isLoaded, setIsLoaded] = useState(() => isGoogleFontReady(font.family));
+  const [isLoading, setIsLoading] = useState(false);
 
   // Lazy-load Google Font stylesheet when this row scrolls into view
   useEffect(() => {
+    if (isLoaded) return;
     const el = rowRef.current;
     if (!el) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
-          loadGoogleFont(font.family);
+          setIsLoading(true);
+          loadGoogleFont(font.family).then((ok) => {
+            setIsLoading(false);
+            if (ok) setIsLoaded(true);
+          });
           observer.disconnect();
         }
       },
@@ -49,7 +56,18 @@ function FontPreviewRow({
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [font.family]);
+  }, [font.family, isLoaded]);
+
+  // Also ensure font loads immediately if selected
+  useEffect(() => {
+    if (isSelected && !isLoaded) {
+      setIsLoading(true);
+      loadGoogleFont(font.family).then((ok) => {
+        setIsLoading(false);
+        if (ok) setIsLoaded(true);
+      });
+    }
+  }, [isSelected, isLoaded, font.family]);
 
   return (
     <button
@@ -81,7 +99,15 @@ function FontPreviewRow({
         <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-500 font-mono">
           {font.category.replace('-serif', '')}
         </span>
-        {isSelected && <Check className="w-3.5 h-3.5 text-purple-600" />}
+        {isSelected &&
+          (isLoading || !isLoaded ? (
+            <Loader2
+              className="w-3.5 h-3.5 text-purple-600 animate-spin"
+              aria-label="Loading font..."
+            />
+          ) : (
+            <Check className="w-3.5 h-3.5 text-purple-600" />
+          ))}
       </div>
     </button>
   );
