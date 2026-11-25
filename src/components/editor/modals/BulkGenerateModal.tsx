@@ -119,12 +119,22 @@ export default function BulkGenerateModal({ stage }: BulkGenerateModalProps) {
 
   const [rows, setRows] = useState<Array<Record<string, string>>>([]);
   const [jsonInput, setJsonInput] = useState('');
-  const [mode, setMode] = useState<'table' | 'json'>('table');
+  const [csvInput, setCsvInput] = useState('');
+  const [mode, setMode] = useState<'table' | 'json' | 'csv'>('table');
   const [format, setFormat] = useState<'png' | 'jpg' | 'pdf'>('png');
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [copiedSchema, setCopiedSchema] = useState(false);
   const csvInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleCSVTextChange = (val: string) => {
+    setCsvInput(val);
+    const parsedRows = parseCSVText(val);
+    if (parsedRows.length > 0) {
+      setRows(parsedRows);
+      setJsonInput(JSON.stringify(parsedRows, null, 2));
+    }
+  };
 
   const handleCSVUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -133,6 +143,7 @@ export default function BulkGenerateModal({ stage }: BulkGenerateModalProps) {
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
       if (!text) return;
+      setCsvInput(text);
       const parsedRows = parseCSVText(text);
       if (parsedRows.length > 0) {
         setRows(parsedRows);
@@ -330,8 +341,8 @@ export default function BulkGenerateModal({ stage }: BulkGenerateModalProps) {
                 </pre>
               </div>
 
-              {/* Mode Switcher: Table vs Raw JSON */}
-              <div className="flex items-center justify-between">
+              {/* Mode Switcher: Table vs Paste CSV vs Raw JSON */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
                   <button
                     onClick={() => setMode('table')}
@@ -340,7 +351,16 @@ export default function BulkGenerateModal({ stage }: BulkGenerateModalProps) {
                     }`}
                   >
                     <FileSpreadsheet className="w-3.5 h-3.5" />
-                    <span>Table Editor ({rows.length} rows)</span>
+                    <span>Table ({rows.length})</span>
+                  </button>
+                  <button
+                    onClick={() => setMode('csv')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                      mode === 'csv' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600'
+                    }`}
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    <span>Paste CSV</span>
                   </button>
                   <button
                     onClick={() => setMode('json')}
@@ -349,7 +369,7 @@ export default function BulkGenerateModal({ stage }: BulkGenerateModalProps) {
                     }`}
                   >
                     <Braces className="w-3.5 h-3.5" />
-                    <span>JSON Array Input</span>
+                    <span>JSON Array</span>
                   </button>
                 </div>
 
@@ -435,6 +455,30 @@ export default function BulkGenerateModal({ stage }: BulkGenerateModalProps) {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              ) : mode === 'csv' ? (
+                /* PASTE CSV INPUT */
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500">
+                    <span>
+                      Paste CSV with header row:{' '}
+                      <code className="font-mono text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded">
+                        {templateVars.map((v) => v.id).join(',')}
+                      </code>
+                    </span>
+                    <span className="font-semibold text-emerald-700">
+                      {parseCSVText(csvInput).length} rows detected
+                    </span>
+                  </div>
+                  <textarea
+                    rows={8}
+                    value={csvInput}
+                    onChange={(e) => handleCSVTextChange(e.target.value)}
+                    className="w-full text-xs font-mono text-slate-900 p-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-indigo-600 outline-none"
+                    placeholder={`${templateVars.map((v) => v.id).join(',')}\n${templateVars
+                      .map((v) => (v.value.startsWith('data:') ? 'https://example.com/photo.jpg' : v.value))
+                      .join(',')}`}
+                  />
                 </div>
               ) : (
                 /* RAW JSON INPUT */
