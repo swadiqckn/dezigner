@@ -10,6 +10,7 @@ import {
   CustomFontItem,
   ProjectWorkFile,
   TemplateLayerVariable,
+  DesignComponentFile,
 } from '@/types/editor';
 import { POSTER_TEMPLATES } from '@/constants/templates';
 import { getAlignedPosition } from '@/utils/transformUtils';
@@ -143,6 +144,8 @@ interface EditorState {
   resetCanvas: () => void;
   loadWorkFile: (file: ProjectWorkFile) => void;
   getWorkFile: () => ProjectWorkFile;
+  exportComponentFile: (layerIds?: string[], componentName?: string) => DesignComponentFile | null;
+  importComponentFile: (component: DesignComponentFile) => void;
 
   // Custom Fonts
   customFonts: CustomFontItem[];
@@ -790,6 +793,103 @@ export const useEditorStore = create<EditorState>((set, get) => {
         selectedLayerIds: file.layers?.[0]?.id ? [file.layers[0].id] : [],
       });
       get().resetZoomPan();
+    },
+
+    exportComponentFile: (layerIds, componentName) => {
+      const { layers, selectedLayerIds, customFonts } = get();
+      const targetIds = layerIds && layerIds.length > 0 ? layerIds : selectedLayerIds;
+      if (targetIds.length === 0) return null;
+
+      // Expand any selected group layers to include their children
+      const includedSet = new Set<string>(targetIds);
+      layers.forEach((l) => {
+        if (includedSet.has(l.id) && l.type === 'group') {
+          ((l as GroupLayer).layerIds || []).forEach((cid) => includedSet.add(cid));
+        }
+      });
+
+      const exportedLayers = JSON.parse(
+        JSON.stringify(layers.filter((l) => includedSet.has(l.id)))
+      ) as CanvasLayer[];
+      if (exportedLayers.length === 0) return null;
+
+      const usedFontFamilies = new Set<string>();
+      exportedLayers.forEach((l) => {
+        if (l.type === 'text' && (l as any).fontFamily) {
+          usedFontFamilies.add((l as any).fontFamily);
+        }
+      });
+
+      const embeddedFonts = customFonts.filter((cf) => usedFontFamilies.has(cf.family));
+      const defaultName =
+        componentName ||
+        (exportedLayers.length === 1 ? exportedLayers[0].name : `${exportedLayers[0].name}-component`);
+
+      return {
+        version: 1,
+        type: 'dezigner-component',
+        name: defaultName,
+        layers: exportedLayers,
+        customFonts: JSON.parse(JSON.stringify(embeddedFonts)),
+        createdAt: new Date().toISOString(),
+      };
+    },
+
+    importComponentFile: (component) => {
+      if (!component || !Array.isArray(component.layers) || component.layers.length === 0) return;
+      pushSnapshot();
+
+      // Load custom fonts if embedded
+      if (component.customFonts && typeof document !== 'undefined') {
+        component.customFonts.forEach(async (f) => {
+          if (f.dataUrl) {
+            try {
+              const fontFace = new FontFace(f.family, `url(${f.dataUrl})`);
+              await fontFace.load();
+              document.fonts.add(fontFace);
+              get().addCustomFont(f);
+            } catch (e) {
+              console.error('Failed to load component custom font:', e);
+            }
+          }
+        });
+      }
+
+      // Generate fresh unique IDs and remap group references
+      const idMap = new Map<string, string>();
+      const stamp = Date.now();
+      component.layers.forEach((l, idx) => {
+        idMap.set(l.id, `comp-${stamp}-${idx}-${Math.random().toString(36).slice(2, 6)}`);
+      });
+
+      const remappedLayers: CanvasLayer[] = component.layers.map((l) => {
+        if (l.type === 'text' && (l as any).fontFamily) {
+          loadGoogleFont((l as any).fontFamily);
+        }
+        const clone = JSON.parse(JSON.stringify(l)) as CanvasLayer;
+        clone.id = idMap.get(l.id)!;
+        if (clone.groupId && idMap.has(clone.groupId)) {
+          clone.groupId = idMap.get(clone.groupId);
+        } else {
+          delete clone.groupId;
+        }
+        if (clone.type === 'group') {
+          (clone as GroupLayer).layerIds = ((clone as GroupLayer).layerIds || []).map(
+            (cid) => idMap.get(cid) || cid
+          );
+        }
+        return clone;
+      });
+
+      // Select top-level imported items (groups or ungrouped layers)
+      const topLevelIds = remappedLayers
+        .filter((l) => !l.groupId)
+        .map((l) => l.id);
+
+      set((state) => ({
+        layers: [...state.layers, ...remappedLayers],
+        selectedLayerIds: topLevelIds.length > 0 ? topLevelIds : [remappedLayers[0].id],
+      }));
     },
 
     setActiveTab: (activeTab) => set({ activeTab }),

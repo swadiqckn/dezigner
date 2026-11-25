@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useEditorStore } from '@/store/useEditorStore';
 import { 
   Type, 
@@ -23,6 +23,8 @@ import {
   Folder,
   FolderPlus,
   FolderMinus,
+  PackagePlus,
+  PackageCheck,
 } from 'lucide-react';
 import { CanvasLayer } from '@/types/editor';
 
@@ -40,10 +42,47 @@ export default function LayersPanel() {
     moveLayerToIndex,
     groupSelectedLayers,
     ungroupLayer,
+    exportComponentFile,
+    importComponentFile,
   } = useEditorStore();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const componentInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleExportComponent = (targetIds?: string[], customName?: string) => {
+    const comp = exportComponentFile(targetIds, customName);
+    if (!comp) return;
+    const json = JSON.stringify(comp, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const safeName = comp.name.replace(/[^a-z0-9-_]/gi, '_').toLowerCase();
+    link.download = `${safeName}.dzc`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportComponent = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string);
+        if (parsed && Array.isArray(parsed.layers)) {
+          importComponentFile(parsed);
+        } else {
+          alert('Invalid component file. Please select a valid .dzc file.');
+        }
+      } catch {
+        alert('Could not read .dzc component file.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   // Layers are ordered bottom to top in state, display top to bottom in UI
   const displayLayers = [...layers].reverse();
@@ -84,7 +123,34 @@ export default function LayersPanel() {
           </p>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap justify-end">
+          <input
+            ref={componentInputRef}
+            type="file"
+            accept=".dzc,.json"
+            className="hidden"
+            onChange={handleImportComponent}
+          />
+          <button
+            onClick={() => componentInputRef.current?.click()}
+            className="flex items-center gap-1 px-2 py-1 bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-700 border border-slate-200 rounded-lg text-[10px] font-bold transition-colors"
+            title="Import reusable .dzc component"
+          >
+            <PackagePlus className="w-3.5 h-3.5 text-purple-600" />
+            <span>Import .dzc</span>
+          </button>
+
+          {selectedLayerIds.length >= 1 && (
+            <button
+              onClick={() => handleExportComponent()}
+              className="flex items-center gap-1 px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-[10px] font-bold transition-colors"
+              title="Export selected layer(s) or group as reusable .dzc component"
+            >
+              <PackageCheck className="w-3.5 h-3.5 text-purple-600" />
+              <span>Export .dzc</span>
+            </button>
+          )}
+
           {selectedLayerIds.length >= 2 && (
             <button
               onClick={() => groupSelectedLayers()}
@@ -238,6 +304,16 @@ export default function LayersPanel() {
                       className="p-1 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded"
                     >
                       <Copy className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleExportComponent([layer.id], layer.name);
+                      }}
+                      title="Export as .dzc Component"
+                      className="p-1 hover:bg-purple-100 text-slate-500 hover:text-purple-700 rounded"
+                    >
+                      <PackageCheck className="w-3.5 h-3.5" />
                     </button>
                   </div>
 

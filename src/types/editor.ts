@@ -175,6 +175,15 @@ export interface ProjectWorkFile {
   savedAt: string;
 }
 
+export interface DesignComponentFile {
+  version: number;
+  type: 'dezigner-component';
+  name: string;
+  layers: CanvasLayer[];
+  customFonts?: CustomFontItem[];
+  createdAt: string;
+}
+
 export interface CanvasDimensions {
   width: number;
   height: number;
