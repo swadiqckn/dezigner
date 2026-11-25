@@ -19,12 +19,21 @@ import { useEditorStore } from '@/store/useEditorStore';
 import { parseERPConfig } from '@/utils/urlConfigParser';
 import { exportCanvas } from '@/utils/exportUtils';
 import { loadProjectFromCache } from '@/utils/projectCache';
+import { parseCSVText, resolveTextParam } from '@/utils/csvUtils';
 import { ShieldCheck, X } from 'lucide-react';
 
 export default function PosterEditor() {
   const [stageInstance, setStageInstance] = useState<Konva.Stage | null>(null);
   const [showInjectedBanner, setShowInjectedBanner] = useState(false);
-  const { loadFromConfig, resetZoomPan, erpMeta, applyTemplateValues, loadWorkFile } = useEditorStore();
+  const {
+    loadFromConfig,
+    resetZoomPan,
+    erpMeta,
+    applyTemplateValues,
+    loadWorkFile,
+    setBulkRows,
+    enterBulkPreview,
+  } = useEditorStore();
 
   // 1. Initial responsive zoom calculation
   useEffect(() => {
@@ -43,30 +52,109 @@ export default function PosterEditor() {
     };
   }, [resetZoomPan]);
 
-  // 2. Check for URL parameters (?config=... or ?institution=...) or restore cached project
+  // 2. Check for URL parameters (?config=..., ?project=..., ?csv=...) or restore cached project
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const urlParams = window.location.search;
-    if (urlParams) {
-      const parsedConfig = parseERPConfig(urlParams);
-      if (parsedConfig) {
-        loadFromConfig(parsedConfig);
-        setShowInjectedBanner(true);
-        return;
+    const search = window.location.search;
+    const params = new URLSearchParams(search);
+
+    const projectParam =
+      params.get('project') ||
+      params.get('projectUrl') ||
+      params.get('workfile') ||
+      params.get('projectData');
+    const csvParam =
+      params.get('csv') ||
+      params.get('csvUrl') ||
+      params.get('csvData');
+
+    const init = async () => {
+      let loadedExternal = false;
+
+      // A. Load Project Work File from URL parameter
+      if (projectParam) {
+        const text = await resolveTextParam(projectParam);
+        if (text) {
+          try {
+            const parsed = JSON.parse(text);
+            if (parsed && Array.isArray(parsed.layers)) {
+              loadWorkFile(parsed);
+              loadedExternal = true;
+            }
+          } catch (e) {
+            console.error('Invalid project JSON in URL parameter:', e);
+          }
+        }
       }
+
+      // B. Load ERP ?config= or ?institution=
+      if (!loadedExternal && search) {
+        const parsedConfig = parseERPConfig(search);
+        if (parsedConfig) {
+          loadFromConfig(parsedConfig);
+          setShowInjectedBanner(true);
+          loadedExternal = true;
+        }
+      }
+
+      // C. Restore from browser cache if nothing external loaded
+      if (!loadedExternal) {
+        const cached = await loadProjectFromCache();
+        if (cached && Array.isArray(cached.layers)) {
+          loadWorkFile(cached);
+        }
+      }
+
+      // D. Load CSV bulk data from URL parameter (if provided)
+      if (csvParam) {
+        const csvText = await resolveTextParam(csvParam);
+        if (csvText) {
+          const parsedRows = parseCSVText(csvText);
+          if (parsedRows.length > 0) {
+            setBulkRows(parsedRows);
+            enterBulkPreview(0);
+          }
+        }
+      }
+    };
+
+    init();
+  }, [loadFromConfig, loadWorkFile, setBulkRows, enterBulkPreview]);
+
+  // 3. Setup PostMessage listener & Flutter WebView JS Bridge (window.DezignerBridge)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).DezignerBridge = {
+        loadProject: (jsonOrObj: string | object) => {
+          const parsed = typeof jsonOrObj === 'string' ? JSON.parse(jsonOrObj) : jsonOrObj;
+          if (parsed && Array.isArray(parsed.layers)) {
+            loadWorkFile(parsed);
+          }
+        },
+        loadCsv: (csvText: string) => {
+          const parsedRows = parseCSVText(csvText);
+          if (parsedRows.length > 0) {
+            setBulkRows(parsedRows);
+            enterBulkPreview(0);
+          }
+        },
+        loadProjectAndCsv: (projectJsonOrObj: string | object, csvText?: string) => {
+          const parsed = typeof projectJsonOrObj === 'string' ? JSON.parse(projectJsonOrObj) : projectJsonOrObj;
+          if (parsed && Array.isArray(parsed.layers)) {
+            loadWorkFile(parsed);
+          }
+          if (csvText) {
+            const parsedRows = parseCSVText(csvText);
+            if (parsedRows.length > 0) {
+              setBulkRows(parsedRows);
+              enterBulkPreview(0);
+            }
+          }
+        },
+      };
     }
 
-    // Restore from browser cache if available
-    loadProjectFromCache().then((cached) => {
-      if (cached && Array.isArray(cached.layers)) {
-        loadWorkFile(cached);
-      }
-    });
-  }, [loadFromConfig, loadWorkFile]);
-
-  // 3. Setup PostMessage listener for parent ERP iframe communication
-  useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
       const data = event.data;
       if (!data || typeof data !== 'object') return;
@@ -76,6 +164,28 @@ export default function PosterEditor() {
         setShowInjectedBanner(true);
       } else if (data.type === 'INJECT_TEMPLATE_VALUES' && data.payload) {
         applyTemplateValues(data.payload);
+      } else if (data.type === 'LOAD_WORK_FILE' && data.payload) {
+        const parsed = typeof data.payload === 'string' ? JSON.parse(data.payload) : data.payload;
+        if (parsed && Array.isArray(parsed.layers)) loadWorkFile(parsed);
+      } else if (data.type === 'LOAD_CSV_DATA' && typeof data.payload === 'string') {
+        const parsedRows = parseCSVText(data.payload);
+        if (parsedRows.length > 0) {
+          setBulkRows(parsedRows);
+          enterBulkPreview(0);
+        }
+      } else if (data.type === 'LOAD_PROJECT_AND_CSV' && data.payload) {
+        const { project, csv } = data.payload;
+        if (project) {
+          const parsed = typeof project === 'string' ? JSON.parse(project) : project;
+          if (parsed && Array.isArray(parsed.layers)) loadWorkFile(parsed);
+        }
+        if (csv) {
+          const parsedRows = parseCSVText(csv);
+          if (parsedRows.length > 0) {
+            setBulkRows(parsedRows);
+            enterBulkPreview(0);
+          }
+        }
       } else if (data.type === 'TRIGGER_EXPORT' && stageInstance) {
         const format = data.payload?.format || 'png';
         const scale = data.payload?.scale || 2;
@@ -108,7 +218,7 @@ export default function PosterEditor() {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [stageInstance, loadFromConfig]);
+  }, [stageInstance, loadFromConfig, loadWorkFile, applyTemplateValues, setBulkRows, enterBulkPreview]);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-white select-none">

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Konva from 'konva';
 import { useEditorStore } from '@/store/useEditorStore';
 import { exportCanvas } from '@/utils/exportUtils';
+import { parseCSVText } from '@/utils/csvUtils';
 import { 
   X, 
   Braces, 
@@ -16,69 +17,6 @@ import {
   Upload,
   Loader2
 } from 'lucide-react';
-
-// Parse CSV text supporting quoted fields, commas inside quotes, and CRLF/LF
-function parseCSVText(csvText: string): Array<Record<string, string>> {
-  const rows: string[][] = [];
-  let currentRow: string[] = [];
-  let currentVal = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < csvText.length; i++) {
-    const char = csvText[i];
-    const nextChar = csvText[i + 1];
-
-    if (inQuotes) {
-      if (char === '"' && nextChar === '"') {
-        currentVal += '"';
-        i++;
-      } else if (char === '"') {
-        inQuotes = false;
-      } else {
-        currentVal += char;
-      }
-    } else {
-      if (char === '"') {
-        inQuotes = true;
-      } else if (char === ',') {
-        currentRow.push(currentVal.trim());
-        currentVal = '';
-      } else if (char === '\r' && nextChar === '\n') {
-        currentRow.push(currentVal.trim());
-        rows.push(currentRow);
-        currentRow = [];
-        currentVal = '';
-        i++;
-      } else if (char === '\n' || char === '\r') {
-        currentRow.push(currentVal.trim());
-        rows.push(currentRow);
-        currentRow = [];
-        currentVal = '';
-      } else {
-        currentVal += char;
-      }
-    }
-  }
-  if (currentVal.length > 0 || currentRow.length > 0) {
-    currentRow.push(currentVal.trim());
-    rows.push(currentRow);
-  }
-
-  if (rows.length < 2) return [];
-  const headers = rows[0].map((h) => h.trim()).filter(Boolean);
-  const result: Array<Record<string, string>> = [];
-
-  for (let r = 1; r < rows.length; r++) {
-    const row = rows[r];
-    if (row.length === 1 && row[0] === '') continue;
-    const obj: Record<string, string> = {};
-    headers.forEach((h, idx) => {
-      obj[h] = row[idx] ?? '';
-    });
-    result.push(obj);
-  }
-  return result;
-}
 
 // Preload image URL (with proxy fallback) so Konva renders immediately before export
 function preloadImageUrl(src: string): Promise<void> {
