@@ -12,7 +12,8 @@ import {
   FileText, 
   CheckCircle2, 
   Sparkles, 
-  SlidersHorizontal 
+  SlidersHorizontal,
+  FolderArchive
 } from 'lucide-react';
 
 interface ExportModalProps {
@@ -20,9 +21,9 @@ interface ExportModalProps {
 }
 
 export default function ExportModal({ stage }: ExportModalProps) {
-  const { isExportModalOpen, setIsExportModalOpen, title, width, height } = useEditorStore();
+  const { isExportModalOpen, setIsExportModalOpen, title, width, height, getWorkFile } = useEditorStore();
 
-  const [format, setFormat] = useState<'png' | 'jpg' | 'pdf'>('png');
+  const [format, setFormat] = useState<'png' | 'jpg' | 'pdf' | 'project'>('png');
   const [scale, setScale] = useState<number>(2); // 2x high-res default
   const [quality, setQuality] = useState<number>(0.95);
   const [transparentBg, setTransparentBg] = useState<boolean>(false);
@@ -34,6 +35,32 @@ export default function ExportModal({ stage }: ExportModalProps) {
   const targetHeight = height * scale;
 
   const handleExport = async () => {
+    if (format === 'project') {
+      setIsExporting(true);
+      try {
+        const data = getWorkFile();
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const safeTitle = (title || 'poster-design').replace(/[^a-z0-9-_]/gi, '_').toLowerCase();
+        link.download = `${safeTitle}.dezign`;
+        link.click();
+        URL.revokeObjectURL(url);
+
+        confetti({
+          particleCount: 60,
+          spread: 50,
+          origin: { y: 0.6 },
+        });
+        setTimeout(() => setIsExportModalOpen(false), 800);
+      } finally {
+        setIsExporting(false);
+      }
+      return;
+    }
+
     if (!stage) {
       alert('Canvas engine is not ready. Please try again.');
       return;
@@ -96,18 +123,19 @@ export default function ExportModal({ stage }: ExportModalProps) {
             <label className="text-xs font-semibold text-slate-700 block mb-2">
               File Format
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
                 { id: 'png', name: 'PNG Image', desc: 'Lossless & Sharp', icon: FileImage },
                 { id: 'jpg', name: 'JPG Image', desc: 'Compact & Web', icon: FileImage },
                 { id: 'pdf', name: 'PDF Print', desc: 'Vector & Print Ready', icon: FileText },
+                { id: 'project', name: 'Project', desc: '.dezign Work File', icon: FolderArchive },
               ].map((fmt) => {
                 const Icon = fmt.icon;
                 const isSelected = format === fmt.id;
                 return (
                   <button
                     key={fmt.id}
-                    onClick={() => setFormat(fmt.id as 'png' | 'jpg' | 'pdf')}
+                    onClick={() => setFormat(fmt.id as 'png' | 'jpg' | 'pdf' | 'project')}
                     className={`p-3 rounded-2xl border text-left flex flex-col gap-1 transition-all ${
                       isSelected
                         ? 'border-purple-600 bg-purple-50/70 ring-1 ring-purple-600 shadow-xs'
@@ -126,8 +154,17 @@ export default function ExportModal({ stage }: ExportModalProps) {
             </div>
           </div>
 
-          {/* Resolution Multiplier */}
-          <div>
+          {format === 'project' ? (
+            <div className="p-4 bg-purple-50/60 border border-purple-200 rounded-2xl space-y-1.5">
+              <h4 className="text-xs font-bold text-purple-900">Export Editable Project File (.dezign)</h4>
+              <p className="text-[11px] text-purple-700/80 leading-relaxed">
+                Downloads a complete project file containing all editable layers, groups, template variables, canvas dimensions, background, and custom fonts. You can reopen it anytime using <strong>Open</strong>.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Resolution Multiplier */}
+              <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-semibold text-slate-700">Resolution Multiplier</label>
               <span className="text-xs font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
@@ -193,6 +230,8 @@ export default function ExportModal({ stage }: ExportModalProps) {
                 className="w-full accent-purple-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
               />
             </div>
+          )}
+            </>
           )}
         </div>
 

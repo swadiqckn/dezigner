@@ -18,12 +18,13 @@ import MobileDrawerSheet from './mobile/MobileDrawerSheet';
 import { useEditorStore } from '@/store/useEditorStore';
 import { parseERPConfig } from '@/utils/urlConfigParser';
 import { exportCanvas } from '@/utils/exportUtils';
+import { loadProjectFromCache } from '@/utils/projectCache';
 import { ShieldCheck, X } from 'lucide-react';
 
 export default function PosterEditor() {
   const [stageInstance, setStageInstance] = useState<Konva.Stage | null>(null);
   const [showInjectedBanner, setShowInjectedBanner] = useState(false);
-  const { loadFromConfig, resetZoomPan, erpMeta, applyTemplateValues } = useEditorStore();
+  const { loadFromConfig, resetZoomPan, erpMeta, applyTemplateValues, loadWorkFile } = useEditorStore();
 
   // 1. Initial responsive zoom calculation
   useEffect(() => {
@@ -42,7 +43,7 @@ export default function PosterEditor() {
     };
   }, [resetZoomPan]);
 
-  // 2. Check for URL parameters (?config=... or ?institution=...) on mount
+  // 2. Check for URL parameters (?config=... or ?institution=...) or restore cached project
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -52,9 +53,17 @@ export default function PosterEditor() {
       if (parsedConfig) {
         loadFromConfig(parsedConfig);
         setShowInjectedBanner(true);
+        return;
       }
     }
-  }, [loadFromConfig]);
+
+    // Restore from browser cache if available
+    loadProjectFromCache().then((cached) => {
+      if (cached && Array.isArray(cached.layers)) {
+        loadWorkFile(cached);
+      }
+    });
+  }, [loadFromConfig, loadWorkFile]);
 
   // 3. Setup PostMessage listener for parent ERP iframe communication
   useEffect(() => {
