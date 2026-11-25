@@ -405,11 +405,31 @@ const RenderImageLayer = React.forwardRef<
 
   useEffect(() => {
     if (!layer.src) return;
+    let cancelled = false;
+    const isExternalUrl = /^https?:\/\//i.test(layer.src);
+
     const img = new window.Image();
     img.crossOrigin = 'Anonymous';
-    img.src = layer.src;
+
     img.onload = () => {
-      setImageObj(img);
+      if (!cancelled) setImageObj(img);
+    };
+
+    img.onerror = () => {
+      // If direct CORS load fails on an external URL, fall back to our image-proxy
+      if (isExternalUrl && !cancelled) {
+        const proxied = new window.Image();
+        proxied.crossOrigin = 'Anonymous';
+        proxied.onload = () => {
+          if (!cancelled) setImageObj(proxied);
+        };
+        proxied.src = `/api/image-proxy?url=${encodeURIComponent(layer.src)}`;
+      }
+    };
+
+    img.src = layer.src;
+    return () => {
+      cancelled = true;
     };
   }, [layer.src]);
 

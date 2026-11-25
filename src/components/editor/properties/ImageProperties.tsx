@@ -84,6 +84,21 @@ export default function ImageProperties({ layer }: ImagePropertiesProps) {
         </div>
       </div>
 
+      {/* Image URL Input (for direct external URL / template testing) */}
+      <div>
+        <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+          Image URL
+        </label>
+        <input
+          type="text"
+          value={layer.src.startsWith('data:') ? '' : layer.src}
+          disabled={layer.editable === false}
+          onChange={(e) => handleUpdate({ src: e.target.value })}
+          placeholder={layer.src.startsWith('data:') ? 'Uploaded local image (paste URL to replace)' : 'https://...'}
+          className="w-full text-xs font-medium text-slate-900 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-600 outline-none"
+        />
+      </div>
+
       {layer.isExternal && (
         <div className="p-2.5 bg-purple-50/70 border border-purple-200 rounded-xl text-[11px] text-purple-800">
           🌐 <strong>ERP Injected Asset</strong>: Injected via ERP configuration payload.

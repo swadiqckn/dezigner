@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Konva from 'konva';
 import { useEditorStore } from '@/store/useEditorStore';
 import { exportCanvas } from '@/utils/exportUtils';
@@ -13,9 +13,93 @@ import {
   Copy, 
   Check, 
   FileSpreadsheet,
-  Sparkles,
+  Upload,
   Loader2
 } from 'lucide-react';
+
+// Parse CSV text supporting quoted fields, commas inside quotes, and CRLF/LF
+function parseCSVText(csvText: string): Array<Record<string, string>> {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentVal = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < csvText.length; i++) {
+    const char = csvText[i];
+    const nextChar = csvText[i + 1];
+
+    if (inQuotes) {
+      if (char === '"' && nextChar === '"') {
+        currentVal += '"';
+        i++;
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        currentVal += char;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === ',') {
+        currentRow.push(currentVal.trim());
+        currentVal = '';
+      } else if (char === '\r' && nextChar === '\n') {
+        currentRow.push(currentVal.trim());
+        rows.push(currentRow);
+        currentRow = [];
+        currentVal = '';
+        i++;
+      } else if (char === '\n' || char === '\r') {
+        currentRow.push(currentVal.trim());
+        rows.push(currentRow);
+        currentRow = [];
+        currentVal = '';
+      } else {
+        currentVal += char;
+      }
+    }
+  }
+  if (currentVal.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentVal.trim());
+    rows.push(currentRow);
+  }
+
+  if (rows.length < 2) return [];
+  const headers = rows[0].map((h) => h.trim()).filter(Boolean);
+  const result: Array<Record<string, string>> = [];
+
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    if (row.length === 1 && row[0] === '') continue;
+    const obj: Record<string, string> = {};
+    headers.forEach((h, idx) => {
+      obj[h] = row[idx] ?? '';
+    });
+    result.push(obj);
+  }
+  return result;
+}
+
+// Preload image URL (with proxy fallback) so Konva renders immediately before export
+function preloadImageUrl(src: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (!src || !/^https?:\/\//i.test(src)) {
+      resolve();
+      return;
+    }
+    const img = new window.Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => resolve();
+    img.onerror = () => {
+      const proxied = new window.Image();
+      proxied.crossOrigin = 'Anonymous';
+      proxied.onload = () => resolve();
+      proxied.onerror = () => resolve();
+      proxied.src = `/api/image-proxy?url=${encodeURIComponent(src)}`;
+    };
+    img.src = src;
+  });
+}
 
 interface BulkGenerateModalProps {
   stage: Konva.Stage | null;
@@ -40,6 +124,40 @@ export default function BulkGenerateModal({ stage }: BulkGenerateModalProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [copiedSchema, setCopiedSchema] = useState(false);
+  const csvInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleCSVUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      if (!text) return;
+      const parsedRows = parseCSVText(text);
+      if (parsedRows.length > 0) {
+        setRows(parsedRows);
+        setJsonInput(JSON.stringify(parsedRows, null, 2));
+        setMode('table');
+      } else {
+        alert('No valid data rows found in CSV. Ensure the first row contains header IDs matching your template variables.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleDownloadSampleCSV = () => {
+    const headers = templateVars.map((v) => `"${v.id}"`).join(',');
+    const sampleRow = templateVars.map((v) => `"${(v.value || '').replace(/"/g, '""')}"`).join(',');
+    const csvContent = `${headers}\n${sampleRow}\n`;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'template-sample.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Initialize default row from placeholder values when modal opens
   useEffect(() => {
@@ -120,11 +238,17 @@ export default function BulkGenerateModal({ stage }: BulkGenerateModalProps) {
         setProgress({ current: i + 1, total: rows.length });
         const rowData = rows[i];
 
-        // 1. Inject values into canvas layers
+        // 1. Preload any external image URLs in this row
+        const imageUrls = templateVars
+          .filter((v) => v.type === 'image' && rowData[v.id])
+          .map((v) => rowData[v.id]);
+        await Promise.all(imageUrls.map((url) => preloadImageUrl(url)));
+
+        // 2. Inject values into canvas layers
         applyTemplateValues(rowData);
 
-        // 2. Wait for React-Konva re-render and image loading
-        await new Promise((resolve) => setTimeout(resolve, 450));
+        // 3. Wait for React-Konva re-render & image paint
+        await new Promise((resolve) => setTimeout(resolve, 550));
 
         // 3. Export canvas file
         const firstVal = Object.values(rowData)[0] || `${i + 1}`;
@@ -229,15 +353,40 @@ export default function BulkGenerateModal({ stage }: BulkGenerateModalProps) {
                   </button>
                 </div>
 
-                {mode === 'table' && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <input
+                    ref={csvInputRef}
+                    type="file"
+                    accept=".csv,text/csv"
+                    className="hidden"
+                    onChange={handleCSVUpload}
+                  />
                   <button
-                    onClick={handleAddRow}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition-colors"
+                    onClick={handleDownloadSampleCSV}
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors"
+                    title="Download Sample CSV with template column headers"
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Row</span>
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Sample CSV</span>
                   </button>
-                )}
+                  <button
+                    onClick={() => csvInputRef.current?.click()}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition-colors"
+                    title="Upload CSV file to populate rows"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Upload CSV</span>
+                  </button>
+                  {mode === 'table' && (
+                    <button
+                      onClick={handleAddRow}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Row</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* TABLE EDITOR */}
