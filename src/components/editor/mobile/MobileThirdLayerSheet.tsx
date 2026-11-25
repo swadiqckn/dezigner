@@ -524,20 +524,41 @@ export default function MobileThirdLayerSheet() {
             </div>
           )}
 
-          {/* 9. CORNER RADIUS */}
+          {/* 9. CORNER RADIUS (0% - 50% Circular) */}
           {activeMobileProperty === 'radius' && layer && (
             <div className="space-y-3 p-3 bg-slate-50 rounded-2xl border border-slate-200">
               <div className="flex justify-between text-xs text-slate-700 font-semibold mb-1">
-                <span>Corner Radius</span>
-                <span className="font-mono">{(layer as any).cornerRadius || 0}px</span>
+                <span>Corner Radius (50% = Circle)</span>
+                <span className="font-mono">
+                  {Math.min(
+                    50,
+                    Math.round(
+                      (((layer as any).cornerRadius || 0) /
+                        Math.max(1, Math.min(layer.width, layer.height || layer.width))) *
+                        100
+                    )
+                  )}
+                  %
+                </span>
               </div>
               <input
                 type="range"
                 min={0}
-                max={150}
-                step={2}
-                value={(layer as any).cornerRadius || 0}
-                onChange={(e) => handleUpdate({ cornerRadius: Number(e.target.value) })}
+                max={50}
+                step={1}
+                value={Math.min(
+                  50,
+                  Math.round(
+                    (((layer as any).cornerRadius || 0) /
+                      Math.max(1, Math.min(layer.width, layer.height || layer.width))) *
+                      100
+                  )
+                )}
+                onChange={(e) => {
+                  const pct = Number(e.target.value);
+                  const minSide = Math.min(layer.width, layer.height || layer.width);
+                  handleUpdate({ cornerRadius: Math.round(minSide * (pct / 100)) });
+                }}
                 className="w-full accent-purple-600 h-2 bg-slate-200 rounded-lg cursor-pointer"
               />
             </div>

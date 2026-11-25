@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useEditorStore } from '@/store/useEditorStore';
+import { getAlignedPosition } from '@/utils/transformUtils';
 import { 
   ArrowUp, 
   ArrowDown, 
@@ -39,23 +40,21 @@ export default function MovementControls({ compact = false }: MovementControlsPr
 
   const centerHorizontal = () => {
     if (isLocked) return;
-    const w = layer.width || 100;
-    updateLayer(layer.id, {
-      x: Math.round((width - w) / 2),
-    }, true);
+    const { x } = getAlignedPosition(layer, width, height, 'center');
+    updateLayer(layer.id, { x }, true);
   };
 
   const centerVertical = () => {
     if (isLocked) return;
-    const h = layer.height || (layer as any).fontSize ? (layer as any).fontSize * 1.3 : 100;
-    updateLayer(layer.id, {
-      y: Math.round((height - h) / 2),
-    }, true);
+    const { y } = getAlignedPosition(layer, width, height, 'middle');
+    updateLayer(layer.id, { y }, true);
   };
 
   const centerBoth = () => {
-    centerHorizontal();
-    centerVertical();
+    if (isLocked) return;
+    const { x } = getAlignedPosition(layer, width, height, 'center');
+    const { y } = getAlignedPosition(layer, width, height, 'middle');
+    updateLayer(layer.id, { x, y }, true);
   };
 
   return (

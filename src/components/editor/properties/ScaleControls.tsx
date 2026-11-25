@@ -49,7 +49,7 @@ export default function ScaleControls({ layerId }: ScaleControlsProps) {
       <div className="flex items-center justify-between">
         <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
           <Maximize2 className="w-3.5 h-3.5 text-purple-600" />
-          <span>Scale X & Y</span>
+          <span>{lockRatio ? 'Scale' : 'Scale X & Y'}</span>
         </label>
         <div className="flex items-center gap-1">
           <button
@@ -77,41 +77,62 @@ export default function ScaleControls({ layerId }: ScaleControlsProps) {
         </div>
       </div>
 
-      {/* Scale X Slider */}
-      <div>
-        <div className="flex justify-between text-[11px] text-slate-600 mb-0.5">
-          <span>Scale X</span>
-          <span className="font-mono font-semibold text-slate-800">{Math.round(scaleX * 100)}%</span>
+      {lockRatio ? (
+        /* Single Uniform Scale Slider when Ratio Locked */
+        <div>
+          <div className="flex justify-between text-[11px] text-slate-600 mb-0.5">
+            <span>Scale (Uniform)</span>
+            <span className="font-mono font-semibold text-slate-800">{Math.round(scaleX * 100)}%</span>
+          </div>
+          <input
+            type="range"
+            min={0.1}
+            max={3}
+            step={0.05}
+            disabled={layer.locked}
+            value={scaleX}
+            onChange={(e) => handleScaleXChange(Number(e.target.value))}
+            className="w-full accent-purple-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
+          />
         </div>
-        <input
-          type="range"
-          min={0.1}
-          max={3}
-          step={0.05}
-          disabled={layer.locked}
-          value={scaleX}
-          onChange={(e) => handleScaleXChange(Number(e.target.value))}
-          className="w-full accent-purple-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
-        />
-      </div>
+      ) : (
+        /* Separate X and Y Sliders ONLY when Ratio Unlocked */
+        <>
+          <div>
+            <div className="flex justify-between text-[11px] text-slate-600 mb-0.5">
+              <span>Scale X</span>
+              <span className="font-mono font-semibold text-slate-800">{Math.round(scaleX * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min={0.1}
+              max={3}
+              step={0.05}
+              disabled={layer.locked}
+              value={scaleX}
+              onChange={(e) => handleScaleXChange(Number(e.target.value))}
+              className="w-full accent-purple-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
+            />
+          </div>
 
-      {/* Scale Y Slider */}
-      <div>
-        <div className="flex justify-between text-[11px] text-slate-600 mb-0.5">
-          <span>Scale Y</span>
-          <span className="font-mono font-semibold text-slate-800">{Math.round(scaleY * 100)}%</span>
-        </div>
-        <input
-          type="range"
-          min={0.1}
-          max={3}
-          step={0.05}
-          disabled={layer.locked}
-          value={scaleY}
-          onChange={(e) => handleScaleYChange(Number(e.target.value))}
-          className="w-full accent-purple-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
-        />
-      </div>
+          <div>
+            <div className="flex justify-between text-[11px] text-slate-600 mb-0.5">
+              <span>Scale Y</span>
+              <span className="font-mono font-semibold text-slate-800">{Math.round(scaleY * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min={0.1}
+              max={3}
+              step={0.05}
+              disabled={layer.locked}
+              value={scaleY}
+              onChange={(e) => handleScaleYChange(Number(e.target.value))}
+              className="w-full accent-purple-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

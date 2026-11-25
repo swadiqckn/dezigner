@@ -12,6 +12,7 @@ import {
   TemplateLayerVariable,
 } from '@/types/editor';
 import { POSTER_TEMPLATES } from '@/constants/templates';
+import { getAlignedPosition } from '@/utils/transformUtils';
 
 interface HistorySnapshot {
   layers: CanvasLayer[];
@@ -252,6 +253,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         selectable: newLayerData.selectable !== false,
         opacity: typeof newLayerData.opacity === 'number' ? newLayerData.opacity : 1,
         rotation: newLayerData.rotation || 0,
+        anchor: newLayerData.anchor || 'center',
       } as CanvasLayer;
 
       set((state) => ({
@@ -547,18 +549,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const selectedLayers = layers.filter((l) => selectedLayerIds.includes(l.id));
 
       if (selectedLayers.length === 1) {
-        // Align relative to canvas
+        // Align relative to canvas respecting anchor point and scale
         const item = selectedLayers[0];
-        let newX = item.x;
-        let newY = item.y;
-
-        const itemHeight = item.height || ((item as any).fontSize ? (item as any).fontSize * 1.3 : 50);
-        if (type === 'left') newX = 0;
-        if (type === 'center') newX = (width - item.width) / 2;
-        if (type === 'right') newX = width - item.width;
-        if (type === 'top') newY = 0;
-        if (type === 'middle') newY = (height - itemHeight) / 2;
-        if (type === 'bottom') newY = height - itemHeight;
+        const { x: newX, y: newY } = getAlignedPosition(item, width, height, type);
 
         set((state) => ({
           layers: state.layers.map((l) => (l.id === item.id ? { ...l, x: newX, y: newY } : l)),

@@ -15,7 +15,7 @@ import {
 } from 'react-konva';
 import Konva from 'konva';
 import { CanvasLayer, TextLayer, ImageLayer, ShapeLayer, IconLayer, BadgeLayer, GroupLayer } from '@/types/editor';
-import { getOffsetForAnchor } from '@/utils/transformUtils';
+import { getOffsetForAnchor, getLayerDimensions } from '@/utils/transformUtils';
 
 interface CanvasLayerItemProps {
   layer: CanvasLayer;
@@ -341,8 +341,8 @@ const RenderTextLayer = React.forwardRef<
     fontStyleString = layer.fontStyle;
   }
 
-  const textHeight = layer.height || layer.fontSize * 1.2;
-  const offset = getOffsetForAnchor(layer.anchor, layer.width, textHeight);
+  const { width: textWidth, height: textHeight } = getLayerDimensions(layer);
+  const offset = getOffsetForAnchor(layer.anchor, textWidth, textHeight);
 
   return (
     <KonvaText

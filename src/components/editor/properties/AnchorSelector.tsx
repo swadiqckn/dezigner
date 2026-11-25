@@ -3,7 +3,7 @@
 import React from 'react';
 import { AnchorPoint } from '@/types/editor';
 import { useEditorStore } from '@/store/useEditorStore';
-import { ANCHOR_POINTS, recalculatePositionForNewAnchor } from '@/utils/transformUtils';
+import { ANCHOR_POINTS, recalculatePositionForNewAnchor, getLayerDimensions } from '@/utils/transformUtils';
 import { Crosshair } from 'lucide-react';
 
 interface AnchorSelectorProps {
@@ -15,8 +15,8 @@ export default function AnchorSelector({ layerId }: AnchorSelectorProps) {
   const layer = layers.find((l) => l.id === layerId);
   if (!layer) return null;
 
-  const currentAnchor: AnchorPoint = layer.anchor || 'top-left';
-  const itemHeight = layer.height || ((layer as any).fontSize ? (layer as any).fontSize * 1.2 : 50);
+  const currentAnchor: AnchorPoint = layer.anchor || 'center';
+  const { width: itemWidth, height: itemHeight } = getLayerDimensions(layer);
 
   const handleSelectAnchor = (newAnchor: AnchorPoint) => {
     if (layer.locked) return;
@@ -25,7 +25,7 @@ export default function AnchorSelector({ layerId }: AnchorSelectorProps) {
       newAnchor,
       layer.x,
       layer.y,
-      layer.width,
+      itemWidth,
       itemHeight,
       layer.rotation || 0
     );

@@ -194,14 +194,36 @@ export default function ImageProperties({ layer }: ImagePropertiesProps) {
         <div>
           <div className="flex justify-between text-xs text-slate-600 mb-1">
             <span>Corner Radius</span>
-            <span className="font-mono">{layer.cornerRadius || 0}px</span>
+            <span className="font-mono">
+              {Math.min(
+                50,
+                Math.round(
+                  ((layer.cornerRadius || 0) /
+                    Math.max(1, Math.min(layer.width, layer.height || layer.width))) *
+                    100
+                )
+              )}
+              %
+            </span>
           </div>
           <input
             type="range"
             min={0}
-            max={150}
-            value={layer.cornerRadius || 0}
-            onChange={(e) => handleUpdate({ cornerRadius: Number(e.target.value) })}
+            max={50}
+            step={1}
+            value={Math.min(
+              50,
+              Math.round(
+                ((layer.cornerRadius || 0) /
+                  Math.max(1, Math.min(layer.width, layer.height || layer.width))) *
+                  100
+              )
+            )}
+            onChange={(e) => {
+              const pct = Number(e.target.value);
+              const minSide = Math.min(layer.width, layer.height || layer.width);
+              handleUpdate({ cornerRadius: Math.round(minSide * (pct / 100)) });
+            }}
             className="w-full accent-purple-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
           />
         </div>
