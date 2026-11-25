@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import * as LucideIcons from 'lucide-react';
 import { 
   Text as KonvaText, 
   Image as KonvaImage, 
@@ -216,39 +218,16 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
       }
 
       case 'icon': {
-        const icon = layer as IconLayer;
-        // Default star icon path if not provided
-        const pathData = icon.svgString || "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z";
-        const scale = Math.min(layer.width, layer.height || layer.width) / 24;
-
         return (
-          <KonvaGroup
-            ref={ref as React.Ref<Konva.Group>}
-            id={layer.id}
-            name={layer.id}
-            x={layer.x}
-            y={layer.y}
-            width={layer.width}
-            height={layer.height}
-            rotation={layer.rotation || 0}
-            opacity={layer.opacity ?? 1}
-            draggable={isDraggable}
-            onClick={onSelect}
-            onTap={onSelect}
+          <RenderIconLayer
+            ref={ref as React.Ref<Konva.Image>}
+            layer={layer as IconLayer}
+            isDraggable={isDraggable}
+            onSelect={onSelect}
             onTransformEnd={handleTransformEnd}
             onDragMove={onDragMove}
             onDragEnd={handleDragEndInternal}
-          >
-            <KonvaPath
-              data={pathData}
-              fill={icon.fill || 'transparent'}
-              stroke={icon.stroke || '#7C3AED'}
-              strokeWidth={(icon.strokeWidth || 2) / scale}
-              scale={{ x: scale, y: scale }}
-              lineCap="round"
-              lineJoin="round"
-            />
-          </KonvaGroup>
+          />
         );
       }
 
@@ -475,3 +454,75 @@ const RenderImageLayer = React.forwardRef<
   );
 });
 RenderImageLayer.displayName = 'RenderImageLayer';
+
+// Subcomponent: Vector Icon Layer rendering exact Lucide SVG
+const RenderIconLayer = React.forwardRef<
+  Konva.Image,
+  {
+    layer: IconLayer;
+    isDraggable: boolean;
+    onSelect: (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => void;
+    onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
+    onDragMove?: (e: Konva.KonvaEventObject<DragEvent>) => void;
+    onDragEnd?: (e: Konva.KonvaEventObject<DragEvent>) => void;
+  }
+>(({ layer, isDraggable, onSelect, onTransformEnd, onDragMove, onDragEnd }, ref) => {
+  const [svgImg, setSvgImg] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    const IconComp = (LucideIcons as any)[layer.iconName] || LucideIcons.Star;
+    const strokeColor = layer.stroke && layer.stroke !== 'transparent' ? layer.stroke : '#39216C';
+    const fillColor = layer.fill && layer.fill !== 'transparent' ? layer.fill : 'none';
+    const strokeW = layer.strokeWidth ?? 2;
+
+    let markup = '';
+    if (layer.svgString && !layer.iconName) {
+      markup = `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 24 24" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeW}" stroke-linecap="round" stroke-linejoin="round"><path d="${layer.svgString}"/></svg>`;
+    } else {
+      const raw = renderToStaticMarkup(
+        <IconComp
+          width={256}
+          height={256}
+          color={strokeColor}
+          strokeWidth={strokeW}
+          fill={fillColor}
+        />
+      );
+      markup = raw.includes('xmlns=')
+        ? raw
+        : raw.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+
+    const img = new window.Image();
+    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
+    img.onload = () => setSvgImg(img);
+  }, [layer.iconName, layer.svgString, layer.stroke, layer.strokeWidth, layer.fill]);
+
+  const iconOffset = getOffsetForAnchor(layer.anchor, layer.width, layer.height || layer.width);
+
+  return (
+    <KonvaImage
+      ref={ref}
+      id={layer.id}
+      name={layer.id}
+      image={svgImg || undefined}
+      x={layer.x}
+      y={layer.y}
+      width={layer.width}
+      height={layer.height || layer.width}
+      offsetX={iconOffset.x}
+      offsetY={iconOffset.y}
+      scaleX={layer.scaleX ?? 1}
+      scaleY={layer.scaleY ?? 1}
+      rotation={layer.rotation || 0}
+      opacity={layer.opacity ?? 1}
+      draggable={isDraggable}
+      onClick={onSelect}
+      onTap={onSelect}
+      onTransformEnd={onTransformEnd}
+      onDragMove={onDragMove}
+      onDragEnd={onDragEnd}
+    />
+  );
+});
+RenderIconLayer.displayName = 'RenderIconLayer';
