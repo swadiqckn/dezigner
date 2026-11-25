@@ -105,6 +105,30 @@ export default function ImageProperties({ layer }: ImagePropertiesProps) {
         </div>
       )}
 
+      {/* Image Fit Mode (Cover vs Stretch Fill) */}
+      <div className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-200">
+        <span className="text-xs font-semibold text-slate-700">Image Fit</span>
+        <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200">
+          {(['cover', 'fill'] as const).map((fitMode) => {
+            const isActive = (layer.fit || 'cover') === fitMode;
+            return (
+              <button
+                key={fitMode}
+                type="button"
+                onClick={() => handleUpdate({ fit: fitMode })}
+                className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold capitalize transition-colors ${
+                  isActive
+                    ? 'bg-purple-600 text-white'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {fitMode === 'cover' ? 'Cover (Crop)' : 'Stretch'}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Dimensions with Aspect Ratio Lock & Size Slider */}
       <div className="space-y-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
         <div className="flex items-center justify-between">

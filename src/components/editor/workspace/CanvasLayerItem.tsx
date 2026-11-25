@@ -460,6 +460,37 @@ const RenderImageLayer = React.forwardRef<
 
   const imgOffset = getOffsetForAnchor(layer.anchor, layer.width, layer.height || 100);
 
+  // Compute automatic object-fit: cover crop when dimensions differ from original image ratio
+  let computedCrop = layer.crop;
+  if (!computedCrop && imageObj && imageObj.naturalWidth > 0 && imageObj.naturalHeight > 0 && layer.fit !== 'fill') {
+    const boxW = layer.width || imageObj.naturalWidth;
+    const boxH = layer.height || imageObj.naturalHeight;
+    const imgW = imageObj.naturalWidth;
+    const imgH = imageObj.naturalHeight;
+    const boxRatio = boxW / boxH;
+    const imgRatio = imgW / imgH;
+
+    if (Math.abs(imgRatio - boxRatio) > 0.01) {
+      if (imgRatio > boxRatio) {
+        const cropW = imgH * boxRatio;
+        computedCrop = {
+          x: (imgW - cropW) / 2,
+          y: 0,
+          width: cropW,
+          height: imgH,
+        };
+      } else {
+        const cropH = imgW / boxRatio;
+        computedCrop = {
+          x: 0,
+          y: (imgH - cropH) / 2,
+          width: imgW,
+          height: cropH,
+        };
+      }
+    }
+  }
+
   return (
     <KonvaImage
       ref={ref}
@@ -488,7 +519,7 @@ const RenderImageLayer = React.forwardRef<
         y: layer.shadowOffsetY ?? 6,
       }}
       shadowOpacity={layer.shadowOpacity ?? 0.5}
-      crop={layer.crop}
+      crop={computedCrop}
       draggable={isDraggable}
       onClick={onSelect}
       onTap={onSelect}
