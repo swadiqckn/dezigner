@@ -5,7 +5,8 @@ import { ImageLayer } from '@/types/editor';
 import { useEditorStore } from '@/store/useEditorStore';
 import AnchorSelector from './AnchorSelector';
 import ScaleControls from './ScaleControls';
-import { Upload, RotateCw, Image as ImageIcon, Lock, Unlock } from 'lucide-react';
+import ColorPickerSection from './ColorPickerSection';
+import { Upload, RotateCw, Image as ImageIcon, Lock, Unlock, Sparkles } from 'lucide-react';
 
 interface ImagePropertiesProps {
   layer: ImageLayer;
@@ -257,6 +258,106 @@ export default function ImageProperties({ layer }: ImagePropertiesProps) {
             className="w-full accent-purple-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
           />
         </div>
+      </div>
+
+      {/* Alpha-Based Drop Shadow */}
+      <div className="space-y-3 bg-slate-50/80 p-3 rounded-xl border border-slate-200">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+            <span>Drop Shadow (Alpha)</span>
+          </label>
+          <button
+            type="button"
+            onClick={() =>
+              handleUpdate(
+                layer.shadowColor && layer.shadowColor !== 'transparent'
+                  ? { shadowColor: 'transparent', shadowBlur: 0 }
+                  : { shadowColor: '#000000', shadowBlur: 18, shadowOffsetX: 6, shadowOffsetY: 10, shadowOpacity: 0.45 }
+              )
+            }
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-colors ${
+              layer.shadowColor && layer.shadowColor !== 'transparent'
+                ? 'bg-purple-600 text-white border-purple-600'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            {layer.shadowColor && layer.shadowColor !== 'transparent' ? 'On' : 'Add Shadow'}
+          </button>
+        </div>
+
+        {layer.shadowColor && layer.shadowColor !== 'transparent' && (
+          <div className="space-y-2.5 pt-1">
+            <ColorPickerSection
+              label="Shadow Color"
+              value={layer.shadowColor}
+              onChange={(shadowColor) => handleUpdate({ shadowColor })}
+              allowTransparent={true}
+            />
+
+            <div>
+              <div className="flex justify-between text-[11px] text-slate-600 mb-0.5">
+                <span>Blur</span>
+                <span className="font-mono">{layer.shadowBlur ?? 12}px</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={60}
+                value={layer.shadowBlur ?? 12}
+                onChange={(e) => handleUpdate({ shadowBlur: Number(e.target.value) })}
+                className="w-full accent-purple-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <div className="flex justify-between text-[11px] text-slate-600 mb-0.5">
+                  <span>Offset X</span>
+                  <span className="font-mono">{layer.shadowOffsetX ?? 4}px</span>
+                </div>
+                <input
+                  type="range"
+                  min={-40}
+                  max={40}
+                  value={layer.shadowOffsetX ?? 4}
+                  onChange={(e) => handleUpdate({ shadowOffsetX: Number(e.target.value) })}
+                  className="w-full accent-purple-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
+                />
+              </div>
+              <div>
+                <div className="flex justify-between text-[11px] text-slate-600 mb-0.5">
+                  <span>Offset Y</span>
+                  <span className="font-mono">{layer.shadowOffsetY ?? 6}px</span>
+                </div>
+                <input
+                  type="range"
+                  min={-40}
+                  max={40}
+                  value={layer.shadowOffsetY ?? 6}
+                  onChange={(e) => handleUpdate({ shadowOffsetY: Number(e.target.value) })}
+                  className="w-full accent-purple-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between text-[11px] text-slate-600 mb-0.5">
+                <span>Shadow Opacity</span>
+                <span className="font-mono">{Math.round((layer.shadowOpacity ?? 0.5) * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min={0.05}
+                max={1}
+                step={0.05}
+                value={layer.shadowOpacity ?? 0.5}
+                onChange={(e) => handleUpdate({ shadowOpacity: Number(e.target.value) })}
+                className="w-full accent-purple-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -455,13 +455,15 @@ const RenderImageLayer = React.forwardRef<
       cornerRadius={layer.cornerRadius || 0}
       stroke={layer.stroke}
       strokeWidth={layer.strokeWidth || 0}
-      shadowColor={layer.shadowColor}
-      shadowBlur={layer.shadowBlur}
+      shadowEnabled={Boolean(layer.shadowColor && layer.shadowColor !== 'transparent')}
+      shadowForStrokeEnabled={false}
+      shadowColor={layer.shadowColor === 'transparent' ? undefined : layer.shadowColor}
+      shadowBlur={layer.shadowBlur ?? 12}
       shadowOffset={{
-        x: layer.shadowOffsetX || 0,
-        y: layer.shadowOffsetY || 0,
+        x: layer.shadowOffsetX ?? 4,
+        y: layer.shadowOffsetY ?? 6,
       }}
-      shadowOpacity={layer.shadowOpacity}
+      shadowOpacity={layer.shadowOpacity ?? 0.5}
       crop={layer.crop}
       draggable={isDraggable}
       onClick={onSelect}

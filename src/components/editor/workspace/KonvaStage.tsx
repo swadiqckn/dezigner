@@ -407,12 +407,13 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
               return newBox;
             }}
             borderStroke="#7C3AED"
-            borderStrokeWidth={1.5}
+            borderStrokeWidth={2}
             anchorStroke="#7C3AED"
+            anchorStrokeWidth={2}
             anchorFill="#FFFFFF"
-            anchorSize={9}
-            anchorCornerRadius={2}
-            rotateAnchorOffset={24}
+            anchorSize={22}
+            anchorCornerRadius={4}
+            rotateAnchorOffset={32}
             keepRatio={true}
           />
         </Layer>

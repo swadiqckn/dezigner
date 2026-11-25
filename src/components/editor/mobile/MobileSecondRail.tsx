@@ -418,6 +418,20 @@ export default function MobileSecondRail() {
               <span className="text-[9px] mt-0.5 leading-none">Opacity</span>
             </button>
 
+            {/* Effects / Alpha Drop Shadow */}
+            <button
+              onClick={() => toggleProperty('effects')}
+              className={`p-2 rounded-xl flex flex-col items-center justify-center transition-all ${
+                activeMobileProperty === 'effects'
+                  ? 'bg-purple-100 text-purple-700 shadow-xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+              title="Drop Shadow"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span className="text-[9px] mt-0.5 leading-none">Shadow</span>
+            </button>
+
             {/* Move & Nudge Position */}
             <button
               onClick={() => toggleProperty('move')}
@@ -527,6 +541,20 @@ export default function MobileSecondRail() {
             >
               <Eye className="w-4 h-4" />
               <span className="text-[9px] mt-0.5 leading-none">Opacity</span>
+            </button>
+
+            {/* Effects / Alpha Drop Shadow */}
+            <button
+              onClick={() => toggleProperty('effects')}
+              className={`p-2 rounded-xl flex flex-col items-center justify-center transition-all ${
+                activeMobileProperty === 'effects'
+                  ? 'bg-purple-100 text-purple-700 shadow-xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+              title="Drop Shadow"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span className="text-[9px] mt-0.5 leading-none">Shadow</span>
             </button>
 
             {/* Move & Nudge Position */}

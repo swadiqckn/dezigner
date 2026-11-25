@@ -54,16 +54,37 @@ export default function UploadsPanel() {
   };
 
   const insertImage = (src: string, name: string) => {
-    addLayer({
-      type: 'image',
-      name: name.replace(/\.[^/.]+$/, ''),
-      src,
-      x: Math.round((width - 450) / 2),
-      y: Math.round((height - 350) / 2),
-      width: 450,
-      height: 350,
-      cornerRadius: 12,
-    });
+    const cleanName = name.replace(/\.[^/.]+$/, '');
+    const img = new window.Image();
+    img.crossOrigin = 'Anonymous';
+
+    const addWithDimensions = (natW: number, natH: number) => {
+      const maxDim = Math.max(250, Math.min(width, height) * 0.45);
+      const scale = Math.min(maxDim / natW, maxDim / natH, 1);
+      const targetW = Math.max(40, Math.round(natW * scale));
+      const targetH = Math.max(40, Math.round(natH * scale));
+
+      addLayer({
+        type: 'image',
+        name: cleanName,
+        src,
+        naturalWidth: natW,
+        naturalHeight: natH,
+        x: Math.round((width - targetW) / 2),
+        y: Math.round((height - targetH) / 2),
+        width: targetW,
+        height: targetH,
+        cornerRadius: 0,
+      });
+    };
+
+    img.onload = () => {
+      addWithDimensions(img.naturalWidth || 450, img.naturalHeight || 350);
+    };
+    img.onerror = () => {
+      addWithDimensions(450, 350);
+    };
+    img.src = src;
   };
 
   const handleUrlSubmit = (e: React.FormEvent) => {

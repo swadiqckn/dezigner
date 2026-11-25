@@ -179,15 +179,28 @@ export default function CanvasWorkspace({ onStageReady }: CanvasWorkspaceProps) 
         const reader = new FileReader();
         reader.onload = (event) => {
           const src = event.target?.result as string;
-          addLayer({
-            type: 'image',
-            name: file.name.replace(/\.[^/.]+$/, ''),
-            src,
-            x: Math.round(width / 4),
-            y: Math.round(height / 4),
-            width: Math.min(500, Math.round(width / 2)),
-            height: Math.min(500, Math.round(height / 2)),
-          });
+          const img = new window.Image();
+          img.onload = () => {
+            const natW = img.naturalWidth || 450;
+            const natH = img.naturalHeight || 350;
+            const maxDim = Math.max(250, Math.min(width, height) * 0.45);
+            const scale = Math.min(maxDim / natW, maxDim / natH, 1);
+            const targetW = Math.max(40, Math.round(natW * scale));
+            const targetH = Math.max(40, Math.round(natH * scale));
+            addLayer({
+              type: 'image',
+              name: file.name.replace(/\.[^/.]+$/, ''),
+              src,
+              naturalWidth: natW,
+              naturalHeight: natH,
+              x: Math.round((width - targetW) / 2),
+              y: Math.round((height - targetH) / 2),
+              width: targetW,
+              height: targetH,
+              cornerRadius: 0,
+            });
+          };
+          img.src = src;
         };
         reader.readAsDataURL(file);
       }
