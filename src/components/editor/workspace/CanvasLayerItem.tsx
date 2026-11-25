@@ -12,7 +12,8 @@ import {
   Path as KonvaPath
 } from 'react-konva';
 import Konva from 'konva';
-import { CanvasLayer, TextLayer, ImageLayer, ShapeLayer, IconLayer, BadgeLayer } from '@/types/editor';
+import { CanvasLayer, TextLayer, ImageLayer, ShapeLayer, IconLayer, BadgeLayer, GroupLayer } from '@/types/editor';
+import { getOffsetForAnchor } from '@/utils/transformUtils';
 
 interface CanvasLayerItemProps {
   layer: CanvasLayer;
@@ -30,6 +31,8 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
     if (layer.visible === false) return null;
 
     const isDraggable = !layer.locked;
+    const itemHeight = layer.height || ((layer as any).fontSize ? (layer as any).fontSize * 1.2 : 50);
+    const offset = getOffsetForAnchor(layer.anchor, layer.width, itemHeight);
 
     // Handle Transform End
     const handleTransformEnd = (e: Konva.KonvaEventObject<Event>) => {
@@ -37,7 +40,7 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
       const scaleX = node.scaleX();
       const scaleY = node.scaleY();
 
-      // Reset scale and update actual width/height
+      // Reset scale and update actual width/height or scaleX/scaleY
       node.scaleX(1);
       node.scaleY(1);
 
@@ -47,6 +50,8 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
         rotation: Math.round(node.rotation()),
         width: Math.max(10, Math.round(node.width() * scaleX)),
         height: Math.max(10, Math.round(node.height() * scaleY)),
+        scaleX: 1,
+        scaleY: 1,
       };
 
       onChange(updates);
@@ -100,6 +105,10 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
             y={layer.y}
             width={layer.width}
             height={layer.height}
+            offsetX={offset.x}
+            offsetY={offset.y}
+            scaleX={layer.scaleX ?? 1}
+            scaleY={layer.scaleY ?? 1}
             fill={(layer as ShapeLayer).fill}
             stroke={(layer as ShapeLayer).stroke}
             strokeWidth={(layer as ShapeLayer).strokeWidth || 0}
@@ -288,6 +297,41 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
         );
       }
 
+      case 'group': {
+        return (
+          <KonvaGroup
+            ref={ref as React.Ref<Konva.Group>}
+            id={layer.id}
+            name={layer.id}
+            x={layer.x}
+            y={layer.y}
+            width={layer.width}
+            height={layer.height}
+            offsetX={offset.x}
+            offsetY={offset.y}
+            scaleX={layer.scaleX ?? 1}
+            scaleY={layer.scaleY ?? 1}
+            rotation={layer.rotation || 0}
+            opacity={layer.opacity ?? 1}
+            draggable={isDraggable}
+            onClick={onSelect}
+            onTap={onSelect}
+            onTransformEnd={handleTransformEnd}
+            onDragMove={onDragMove}
+            onDragEnd={handleDragEndInternal}
+          >
+            <KonvaRect
+              width={layer.width}
+              height={layer.height || 50}
+              fill="transparent"
+              stroke="#A855F7"
+              strokeWidth={1}
+              dash={[5, 5]}
+            />
+          </KonvaGroup>
+        );
+      }
+
       default:
         return null;
     }
@@ -318,6 +362,9 @@ const RenderTextLayer = React.forwardRef<
     fontStyleString = layer.fontStyle;
   }
 
+  const textHeight = layer.height || layer.fontSize * 1.2;
+  const offset = getOffsetForAnchor(layer.anchor, layer.width, textHeight);
+
   return (
     <KonvaText
       ref={ref}
@@ -326,7 +373,11 @@ const RenderTextLayer = React.forwardRef<
       text={layer.text}
       x={layer.x}
       y={layer.y}
-      width={layer.width}
+      width={layer.autoWidth === false ? layer.width : undefined}
+      offsetX={offset.x}
+      offsetY={offset.y}
+      scaleX={layer.scaleX ?? 1}
+      scaleY={layer.scaleY ?? 1}
       fontSize={layer.fontSize}
       fontFamily={layer.fontFamily}
       fontStyle={fontStyleString}
@@ -346,7 +397,7 @@ const RenderTextLayer = React.forwardRef<
         y: layer.shadowOffsetY || 0,
       }}
       shadowOpacity={layer.shadowOpacity}
-      wrap="word"
+      wrap={layer.autoWidth === false ? "word" : "none"}
       draggable={isDraggable}
       onClick={onSelect}
       onTap={onSelect}
@@ -383,6 +434,8 @@ const RenderImageLayer = React.forwardRef<
     };
   }, [layer.src]);
 
+  const imgOffset = getOffsetForAnchor(layer.anchor, layer.width, layer.height || 100);
+
   return (
     <KonvaImage
       ref={ref}
@@ -393,6 +446,10 @@ const RenderImageLayer = React.forwardRef<
       y={layer.y}
       width={layer.width}
       height={layer.height}
+      offsetX={imgOffset.x}
+      offsetY={imgOffset.y}
+      scaleX={layer.scaleX ?? 1}
+      scaleY={layer.scaleY ?? 1}
       rotation={layer.rotation || 0}
       opacity={layer.opacity ?? 1}
       cornerRadius={layer.cornerRadius || 0}

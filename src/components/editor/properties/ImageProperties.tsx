@@ -3,6 +3,8 @@
 import React, { useRef, useState } from 'react';
 import { ImageLayer } from '@/types/editor';
 import { useEditorStore } from '@/store/useEditorStore';
+import AnchorSelector from './AnchorSelector';
+import ScaleControls from './ScaleControls';
 import { Upload, RotateCw, Image as ImageIcon, Lock, Unlock } from 'lucide-react';
 
 interface ImagePropertiesProps {
@@ -147,6 +149,12 @@ export default function ImageProperties({ layer }: ImagePropertiesProps) {
           />
         </div>
       </div>
+
+      {/* Scale X & Y + Ratio Lock */}
+      <ScaleControls layerId={layer.id} />
+
+      {/* Anchor Point 9-Point Matrix */}
+      <AnchorSelector layerId={layer.id} />
 
       {/* Rotation with Slider Control */}
       <div className="space-y-1.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">

@@ -5,6 +5,9 @@ import { useEditorStore } from '@/store/useEditorStore';
 import { POPULAR_FONTS, FONT_PAIRINGS } from '@/constants/fonts';
 import ColorPickerSection from '../properties/ColorPickerSection';
 import MovementControls from '../properties/MovementControls';
+import AnchorSelector from '../properties/AnchorSelector';
+import ScaleControls from '../properties/ScaleControls';
+import FontSelector from '../properties/FontSelector';
 import { 
   X, 
   Bold, 
@@ -120,6 +123,10 @@ export default function MobileThirdLayerSheet() {
         return 'Shadow & Effects';
       case 'move':
         return 'Move & Nudge Position';
+      case 'scale':
+        return 'Scale X & Y';
+      case 'anchor':
+        return 'Anchor Point';
       case 'radius':
         return 'Corner Radius';
       case 'opacity':
@@ -232,36 +239,12 @@ export default function MobileThirdLayerSheet() {
             </div>
           )}
 
-          {/* 3. FONT FAMILY */}
+          {/* 3. FONT FAMILY (Searchable Google Fonts + Custom Font Upload) */}
           {activeMobileProperty === 'font' && layer && layer.type === 'text' && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 block mb-2">
-                Select Font Family
-              </label>
-              <div className="grid grid-cols-1 gap-1.5">
-                {POPULAR_FONTS.map((font) => {
-                  const isSelected = (layer as TextLayer).fontFamily === font.family;
-                  return (
-                    <button
-                      key={font.name}
-                      onClick={() => handleUpdate({ fontFamily: font.family })}
-                      className={`w-full text-left px-3.5 py-2.5 rounded-xl border flex items-center justify-between transition-all ${
-                        isSelected
-                          ? 'bg-purple-50 text-purple-800 border-purple-300 font-bold'
-                          : 'bg-slate-50/60 hover:bg-slate-100 text-slate-800 border-slate-200'
-                      }`}
-                    >
-                      <span className="text-xs" style={{ fontFamily: font.family }}>
-                        {font.name}
-                      </span>
-                      <span className="text-[11px] text-slate-400 font-mono">
-                        {font.sample}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <FontSelector
+              value={(layer as TextLayer).fontFamily}
+              onChange={(fontFamily) => handleUpdate({ fontFamily })}
+            />
           )}
 
           {/* 4. SIZE & DIMENSIONS */}
@@ -734,6 +717,20 @@ export default function MobileThirdLayerSheet() {
           {activeMobileProperty === 'move' && layer && (
             <div className="space-y-3">
               <MovementControls />
+            </div>
+          )}
+
+          {/* 15. SCALE X & Y */}
+          {activeMobileProperty === 'scale' && layer && (
+            <div className="space-y-3">
+              <ScaleControls layerId={layer.id} />
+            </div>
+          )}
+
+          {/* 16. ANCHOR POINT */}
+          {activeMobileProperty === 'anchor' && layer && (
+            <div className="space-y-3">
+              <AnchorSelector layerId={layer.id} />
             </div>
           )}
         </div>

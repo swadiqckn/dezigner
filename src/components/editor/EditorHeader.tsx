@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useEditorStore } from '@/store/useEditorStore';
 import { CANVAS_PRESETS } from '@/constants/canvasPresets';
 import {
@@ -15,6 +15,8 @@ import {
   MoreVertical,
   ArrowRightLeft,
   Maximize2,
+  Save,
+  FolderOpen,
 } from 'lucide-react';
 
 export default function EditorHeader() {
@@ -34,6 +36,8 @@ export default function EditorHeader() {
     setIsErpModalOpen,
     setIsShortcutsModalOpen,
     erpMeta,
+    getWorkFile,
+    loadWorkFile,
   } = useEditorStore();
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -41,6 +45,40 @@ export default function EditorHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [customW, setCustomW] = useState(width);
   const [customH, setCustomH] = useState(height);
+  const workFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleSaveWorkFile = () => {
+    const data = getWorkFile();
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const safeTitle = (title || 'poster-design').replace(/[^a-z0-9-_]/gi, '_').toLowerCase();
+    link.download = `${safeTitle}.dezign`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleOpenWorkFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string);
+        if (parsed && Array.isArray(parsed.layers)) {
+          loadWorkFile(parsed);
+        } else {
+          alert('Invalid work file format.');
+        }
+      } catch {
+        alert('Could not read work file. Make sure it is a valid .dezign or .json file.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   useEffect(() => {
     setCustomW(width);
@@ -235,6 +273,34 @@ export default function EditorHeader() {
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1.5 md:gap-2.5">
+        <input
+          ref={workFileInputRef}
+          type="file"
+          accept=".dezign,.json"
+          className="hidden"
+          onChange={handleOpenWorkFile}
+        />
+
+        {/* Desktop Work File Controls */}
+        <div className="hidden md:flex items-center gap-1 border-r border-slate-200 pr-2">
+          <button
+            onClick={() => workFileInputRef.current?.click()}
+            className="flex items-center gap-1 px-2.5 py-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl text-xs font-semibold transition-colors"
+            title="Open Work File (.dezign)"
+          >
+            <FolderOpen className="w-3.5 h-3.5 text-purple-600" />
+            <span>Open</span>
+          </button>
+          <button
+            onClick={handleSaveWorkFile}
+            className="flex items-center gap-1 px-2.5 py-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl text-xs font-semibold transition-colors"
+            title="Export / Save Work File (.dezign)"
+          >
+            <Save className="w-3.5 h-3.5 text-purple-600" />
+            <span>Save File</span>
+          </button>
+        </div>
+
         {/* Desktop ERP Hub Button */}
         <button
           onClick={() => setIsErpModalOpen(true)}
@@ -273,7 +339,28 @@ export default function EditorHeader() {
           </button>
 
           {mobileMenuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-2xl shadow-xl border border-slate-200 p-1.5 z-50">
+            <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-2xl shadow-xl border border-slate-200 p-1.5 z-50">
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  workFileInputRef.current?.click();
+                }}
+                className="w-full text-left p-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+              >
+                <FolderOpen className="w-4 h-4 text-purple-600" />
+                <span>Open Work File</span>
+              </button>
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleSaveWorkFile();
+                }}
+                className="w-full text-left p-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+              >
+                <Save className="w-4 h-4 text-purple-600" />
+                <span>Save Work File</span>
+              </button>
+              <div className="h-[1px] bg-slate-100 my-1" />
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);

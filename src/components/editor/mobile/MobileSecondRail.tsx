@@ -22,6 +22,8 @@ import {
   X,
   Sparkle,
   Move,
+  Crosshair,
+  Maximize2,
 } from 'lucide-react';
 
 export default function MobileSecondRail() {
@@ -543,6 +545,34 @@ export default function MobileSecondRail() {
         )}
 
         <div className="h-6 w-[1px] bg-slate-200 shrink-0 mx-1" />
+
+        {/* SCALE X & Y */}
+        <button
+          onClick={() => toggleProperty('scale')}
+          className={`p-2 rounded-xl flex flex-col items-center justify-center transition-all ${
+            activeMobileProperty === 'scale'
+              ? 'bg-purple-100 text-purple-700 shadow-xs font-bold'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+          title="Scale X & Y"
+        >
+          <Maximize2 className="w-4 h-4" />
+          <span className="text-[9px] mt-0.5 leading-none">Scale</span>
+        </button>
+
+        {/* ANCHOR POINT */}
+        <button
+          onClick={() => toggleProperty('anchor')}
+          className={`p-2 rounded-xl flex flex-col items-center justify-center transition-all ${
+            activeMobileProperty === 'anchor'
+              ? 'bg-purple-100 text-purple-700 shadow-xs font-bold'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+          title="Anchor Point"
+        >
+          <Crosshair className="w-4 h-4" />
+          <span className="text-[9px] mt-0.5 leading-none">Anchor</span>
+        </button>
 
         {/* LAYERS & POSITION (Shows layer order, duplicate, lock options in 3rd layer) */}
         <button

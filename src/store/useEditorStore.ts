@@ -5,7 +5,10 @@ import {
   CanvasDimensions, 
   PosterTemplate, 
   ERPExternalConfig,
-  NewLayerInput
+  NewLayerInput,
+  GroupLayer,
+  CustomFontItem,
+  ProjectWorkFile,
 } from '@/types/editor';
 import { POSTER_TEMPLATES } from '@/constants/templates';
 
@@ -97,6 +100,10 @@ interface EditorState {
   clearSelection: () => void;
   selectAll: () => void;
 
+  // Grouping
+  groupSelectedLayers: (name?: string) => string | null;
+  ungroupLayer: (groupId: string) => void;
+
   // Layer ordering
   reorderLayer: (id: string, action: 'front' | 'back' | 'forward' | 'backward') => void;
   moveLayerToIndex: (id: string, newIndex: number) => void;
@@ -124,6 +131,12 @@ interface EditorState {
   loadTemplate: (template: PosterTemplate) => void;
   loadFromConfig: (config: ERPExternalConfig) => void;
   resetCanvas: () => void;
+  loadWorkFile: (file: ProjectWorkFile) => void;
+  getWorkFile: () => ProjectWorkFile;
+
+  // Custom Fonts
+  customFonts: CustomFontItem[];
+  addCustomFont: (font: CustomFontItem) => void;
 
   // UI state toggles
   setActiveTab: (tab: SidebarTab) => void;
@@ -200,6 +213,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     isShortcutsModalOpen: false,
     activeMobileProperty: null,
     isMobileTextTemplatesOpen: false,
+    customFonts: [],
 
     erpMeta: undefined,
 
@@ -387,6 +401,59 @@ export const useEditorStore = create<EditorState>((set, get) => {
       set((state) => ({
         selectedLayerIds: state.layers.filter((l) => l.visible !== false && l.selectable !== false).map((l) => l.id),
       }));
+    },
+
+    groupSelectedLayers: (name) => {
+      const { layers, selectedLayerIds } = get();
+      if (selectedLayerIds.length < 2) return null;
+      pushSnapshot();
+      const selectedLayers = layers.filter((l) => selectedLayerIds.includes(l.id));
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      selectedLayers.forEach((l) => {
+        minX = Math.min(minX, l.x);
+        minY = Math.min(minY, l.y);
+        maxX = Math.max(maxX, l.x + (l.width || 0));
+        maxY = Math.max(maxY, l.y + (l.height || (l as any).fontSize || 50));
+      });
+      const groupId = `group-${Date.now()}`;
+      const groupLayer: GroupLayer = {
+        id: groupId,
+        name: name || `Group ${layers.filter((l) => l.type === 'group').length + 1}`,
+        type: 'group',
+        x: Math.round(minX),
+        y: Math.round(minY),
+        width: Math.max(20, Math.round(maxX - minX)),
+        height: Math.max(20, Math.round(maxY - minY)),
+        layerIds: [...selectedLayerIds],
+        visible: true,
+        locked: false,
+        selectable: true,
+        deletable: true,
+        editable: true,
+      };
+      const updatedLayers = layers.map((l) =>
+        selectedLayerIds.includes(l.id) ? { ...l, groupId } : l
+      );
+      set({
+        layers: [...updatedLayers, groupLayer],
+        selectedLayerIds: [groupId],
+      });
+      return groupId;
+    },
+
+    ungroupLayer: (groupId) => {
+      const { layers } = get();
+      const group = layers.find((l) => l.id === groupId);
+      if (!group || group.type !== 'group') return;
+      pushSnapshot();
+      const childIds = (group as GroupLayer).layerIds || [];
+      const updatedLayers = layers
+        .filter((l) => l.id !== groupId)
+        .map((l) => (l.groupId === groupId ? { ...l, groupId: undefined } : l));
+      set({
+        layers: updatedLayers,
+        selectedLayerIds: childIds,
+      });
     },
 
     reorderLayer: (id, action) => {
@@ -652,6 +719,53 @@ export const useEditorStore = create<EditorState>((set, get) => {
         layers: [],
         selectedLayerIds: [],
       });
+    },
+
+    addCustomFont: (font) => {
+      set((state) => ({ customFonts: [...state.customFonts, font] }));
+    },
+
+    getWorkFile: () => {
+      const state = get();
+      return {
+        version: 1,
+        title: state.title,
+        width: state.width,
+        height: state.height,
+        presetName: state.presetName,
+        background: JSON.parse(JSON.stringify(state.background)),
+        layers: JSON.parse(JSON.stringify(state.layers)),
+        customFonts: JSON.parse(JSON.stringify(state.customFonts)),
+        savedAt: new Date().toISOString(),
+      };
+    },
+
+    loadWorkFile: (file) => {
+      pushSnapshot();
+      if (file.customFonts && typeof document !== 'undefined') {
+        file.customFonts.forEach(async (f) => {
+          if (f.dataUrl) {
+            try {
+              const fontFace = new FontFace(f.family, `url(${f.dataUrl})`);
+              await fontFace.load();
+              document.fonts.add(fontFace);
+            } catch (e) {
+              console.error('Failed to load font from work file', e);
+            }
+          }
+        });
+      }
+      set({
+        title: file.title || 'Loaded Design',
+        width: file.width || DEFAULT_WIDTH,
+        height: file.height || DEFAULT_HEIGHT,
+        presetName: file.presetName || 'Custom',
+        background: file.background || { type: 'solid', color: '#FFFFFF' },
+        layers: file.layers || [],
+        customFonts: file.customFonts || [],
+        selectedLayerIds: file.layers?.[0]?.id ? [file.layers[0].id] : [],
+      });
+      get().resetZoomPan();
     },
 
     setActiveTab: (activeTab) => set({ activeTab }),

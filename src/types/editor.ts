@@ -7,7 +7,19 @@ export type LayerType =
   | 'star' 
   | 'polygon' 
   | 'icon' 
-  | 'badge';
+  | 'badge'
+  | 'group';
+
+export type AnchorPoint = 
+  | 'top-left' 
+  | 'top-center' 
+  | 'top-right' 
+  | 'middle-left' 
+  | 'center' 
+  | 'middle-right' 
+  | 'bottom-left' 
+  | 'bottom-center' 
+  | 'bottom-right';
 
 export interface BaseLayer {
   id: string;
@@ -20,6 +32,8 @@ export interface BaseLayer {
   rotation?: number; // degrees
   scaleX?: number;
   scaleY?: number;
+  anchor?: AnchorPoint;
+  groupId?: string; // If grouped inside a parent group
   opacity?: number; // 0 to 1
   visible?: boolean;
   locked?: boolean; // UX restriction: cannot drag or resize
@@ -50,6 +64,7 @@ export interface TextLayer extends BaseLayer {
   shadowOffsetY?: number;
   shadowOpacity?: number;
   textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+  autoWidth?: boolean; // if true, text stays on single line until manual newline
 }
 
 export interface ImageLayer extends BaseLayer {
@@ -114,7 +129,12 @@ export interface BadgeLayer extends BaseLayer {
   fontSize?: number;
 }
 
-export type CanvasLayer = TextLayer | ImageLayer | ShapeLayer | IconLayer | BadgeLayer;
+export interface GroupLayer extends BaseLayer {
+  type: 'group';
+  layerIds: string[]; // IDs of member layers in the group
+}
+
+export type CanvasLayer = TextLayer | ImageLayer | ShapeLayer | IconLayer | BadgeLayer | GroupLayer;
 
 export type NewLayerInput = (
   | Omit<TextLayer, 'id'>
@@ -122,7 +142,27 @@ export type NewLayerInput = (
   | Omit<ShapeLayer, 'id'>
   | Omit<IconLayer, 'id'>
   | Omit<BadgeLayer, 'id'>
+  | Omit<GroupLayer, 'id'>
 ) & { id?: string; height?: number };
+
+export interface CustomFontItem {
+  name: string;
+  family: string;
+  dataUrl?: string;
+  format?: string;
+}
+
+export interface ProjectWorkFile {
+  version: number;
+  title: string;
+  width: number;
+  height: number;
+  presetName: string;
+  background: CanvasBackground;
+  layers: CanvasLayer[];
+  customFonts?: CustomFontItem[];
+  savedAt: string;
+}
 
 export interface CanvasDimensions {
   width: number;

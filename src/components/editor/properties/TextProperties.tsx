@@ -3,8 +3,10 @@
 import React from 'react';
 import { TextLayer } from '@/types/editor';
 import { useEditorStore } from '@/store/useEditorStore';
-import { POPULAR_FONTS } from '@/constants/fonts';
 import ColorPickerSection from './ColorPickerSection';
+import FontSelector from './FontSelector';
+import AnchorSelector from './AnchorSelector';
+import ScaleControls from './ScaleControls';
 import { 
   Bold, 
   Italic, 
@@ -34,18 +36,35 @@ export default function TextProperties({ layer }: TextPropertiesProps) {
 
   return (
     <div className="space-y-4">
-      {/* Text Content Area */}
+      {/* Text Content Area (Single line until manual Enter) */}
       <div>
-        <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-          Text Content
-        </label>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-xs font-semibold text-slate-700">
+            Text Content
+          </label>
+          <button
+            type="button"
+            onClick={() => handleUpdate({ autoWidth: layer.autoWidth === false ? true : false })}
+            className={`text-[10px] font-semibold px-2 py-0.5 rounded border transition-colors ${
+              layer.autoWidth !== false
+                ? 'bg-purple-50 text-purple-700 border-purple-200'
+                : 'bg-slate-50 text-slate-500 border-slate-200'
+            }`}
+            title="Keep text on a single line until Enter is pressed"
+          >
+            {layer.autoWidth !== false ? 'Auto Single-Line' : 'Fixed Box Wrap'}
+          </button>
+        </div>
         <textarea
           rows={3}
+          wrap={layer.autoWidth === false ? "soft" : "off"}
           value={layer.text}
           disabled={layer.editable === false}
           onChange={(e) => handleUpdate({ text: e.target.value })}
-          className="w-full text-xs font-semibold text-slate-900 p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-600 focus:ring-1 focus:ring-purple-600 outline-none resize-none disabled:bg-slate-100 disabled:text-slate-400"
-          placeholder="Enter text..."
+          className={`w-full text-xs font-semibold text-slate-900 p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-600 focus:ring-1 focus:ring-purple-600 outline-none resize-none disabled:bg-slate-100 disabled:text-slate-400 ${
+            layer.autoWidth !== false ? 'whitespace-pre overflow-x-auto' : ''
+          }`}
+          placeholder="Type text... Press Enter for new line"
         />
         {layer.editable === false && (
           <p className="text-[11px] text-amber-600 mt-1 font-medium">
@@ -54,23 +73,11 @@ export default function TextProperties({ layer }: TextPropertiesProps) {
         )}
       </div>
 
-      {/* Font Family */}
-      <div>
-        <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-          Font Family
-        </label>
-        <select
-          value={layer.fontFamily}
-          onChange={(e) => handleUpdate({ fontFamily: e.target.value })}
-          className="w-full text-xs font-semibold text-slate-900 p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-600 outline-none cursor-pointer"
-        >
-          {POPULAR_FONTS.map((font) => (
-            <option key={font.name} value={font.family} className="text-slate-900 bg-white">
-              {font.name} ({font.sample})
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Google Fonts & Custom Fonts */}
+      <FontSelector
+        value={layer.fontFamily}
+        onChange={(fontFamily) => handleUpdate({ fontFamily })}
+      />
 
       {/* Font Size with Slider Control */}
       <div className="space-y-1.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
@@ -95,6 +102,12 @@ export default function TextProperties({ layer }: TextPropertiesProps) {
           className="w-full accent-purple-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
         />
       </div>
+
+      {/* Scale X & Y + Ratio Lock */}
+      <ScaleControls layerId={layer.id} />
+
+      {/* Anchor Point 9-Point Matrix */}
+      <AnchorSelector layerId={layer.id} />
 
       {/* Rotation with Slider Control */}
       <div className="space-y-1.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">

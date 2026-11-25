@@ -5,7 +5,7 @@ import { Stage, Layer, Rect, Transformer, Line } from 'react-konva';
 import Konva from 'konva';
 import { useEditorStore } from '@/store/useEditorStore';
 import { CanvasLayerItem } from './CanvasLayerItem';
-import { CanvasLayer, TextLayer } from '@/types/editor';
+import { CanvasLayer, TextLayer, GroupLayer } from '@/types/editor';
 
 interface KonvaStageProps {
   onStageReady?: (stage: Konva.Stage | null) => void;
@@ -353,7 +353,23 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
                   const isMulti = e.evt.shiftKey;
                   toggleSelection(layer.id, isMulti);
                 }}
-                onChange={(updates) => updateLayer(layer.id, updates, true)}
+                onChange={(updates) => {
+                  if (layer.type === 'group' && (updates.x !== undefined || updates.y !== undefined)) {
+                    const dx = (updates.x ?? layer.x) - layer.x;
+                    const dy = (updates.y ?? layer.y) - layer.y;
+                    const childIds = (layer as GroupLayer).layerIds || [];
+                    updateLayer(layer.id, updates, false);
+                    childIds.forEach((cid) => {
+                      const child = layers.find((l) => l.id === cid);
+                      if (child) {
+                        updateLayer(cid, { x: child.x + dx, y: child.y + dy }, false);
+                      }
+                    });
+                    commitSnapshot();
+                  } else {
+                    updateLayer(layer.id, updates, true);
+                  }
+                }}
                 onDragMove={handleDragMove}
                 onDragEnd={handleDragEnd}
                 onDoubleClick={() => {
@@ -416,7 +432,8 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
         >
           <textarea
             autoFocus
-            className="w-full bg-white text-slate-900 border-2 border-purple-600 rounded p-1 shadow-xl outline-none resize-none font-sans"
+            wrap="off"
+            className="min-w-[200px] w-max bg-white text-slate-900 border-2 border-purple-600 rounded p-1.5 shadow-xl outline-none resize-none font-sans whitespace-pre overflow-x-auto"
             style={{
               fontSize: `${Math.max(12, editingTextPos.fontSize * zoom)}px`,
               lineHeight: 1.2,

@@ -19,7 +19,10 @@ import {
   ChevronUp, 
   ChevronDown,
   ShieldCheck,
-  Edit2
+  Edit2,
+  Folder,
+  FolderPlus,
+  FolderMinus,
 } from 'lucide-react';
 import { CanvasLayer } from '@/types/editor';
 
@@ -35,6 +38,8 @@ export default function LayersPanel() {
     deleteLayer,
     renameLayer,
     moveLayerToIndex,
+    groupSelectedLayers,
+    ungroupLayer,
   } = useEditorStore();
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -57,21 +62,49 @@ export default function LayersPanel() {
         return <Star className="w-4 h-4 text-amber-500 shrink-0" />;
       case 'line':
         return <Minus className="w-4 h-4 text-slate-500 shrink-0" />;
+      case 'group':
+        return <Folder className="w-4 h-4 text-indigo-600 shrink-0" />;
       default:
         return <LayersIcon className="w-4 h-4 text-purple-500 shrink-0" />;
     }
   };
 
+  const selectedLayer = layers.find((l) => selectedLayerIds.includes(l.id));
+  const isGroupSelected = selectedLayerIds.length === 1 && selectedLayer?.type === 'group';
+
   return (
-    <div className="flex flex-col h-full space-y-4">
+    <div className="flex flex-col h-full space-y-3">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">
             Layer Hierarchy
           </h3>
           <p className="text-[11px] text-slate-500">
-            {layers.length} layers • Top layers render above bottom layers
+            {layers.length} layers • Hold Shift to multi-select
           </p>
+        </div>
+
+        <div className="flex items-center gap-1">
+          {selectedLayerIds.length >= 2 && (
+            <button
+              onClick={() => groupSelectedLayers()}
+              className="flex items-center gap-1 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-[11px] font-bold transition-colors"
+              title="Group Selected Layers"
+            >
+              <FolderPlus className="w-3.5 h-3.5" />
+              <span>Group</span>
+            </button>
+          )}
+          {isGroupSelected && (
+            <button
+              onClick={() => ungroupLayer(selectedLayer.id)}
+              className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-[11px] font-bold transition-colors"
+              title="Ungroup Layers"
+            >
+              <FolderMinus className="w-3.5 h-3.5" />
+              <span>Ungroup</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -92,9 +125,9 @@ export default function LayersPanel() {
             return (
               <div
                 key={layer.id}
-                onClick={() => {
+                onClick={(e) => {
                   if (layer.selectable !== false) {
-                    toggleSelection(layer.id, false);
+                    toggleSelection(layer.id, e.shiftKey || e.ctrlKey || e.metaKey);
                   }
                 }}
                 className={`group px-3 py-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all cursor-pointer ${

@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { ShapeLayer } from '@/types/editor';
 import { useEditorStore } from '@/store/useEditorStore';
 import ColorPickerSection from './ColorPickerSection';
+import AnchorSelector from './AnchorSelector';
+import ScaleControls from './ScaleControls';
 import { RotateCw, Lock, Unlock } from 'lucide-react';
 
 interface ShapePropertiesProps {
@@ -142,6 +144,12 @@ export default function ShapeProperties({ layer }: ShapePropertiesProps) {
           className="w-full accent-purple-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
         />
       </div>
+
+      {/* Scale X & Y + Ratio Lock */}
+      <ScaleControls layerId={layer.id} />
+
+      {/* Anchor Point 9-Point Matrix */}
+      <AnchorSelector layerId={layer.id} />
 
       {/* Stroke / Border */}
       <div className="space-y-3 bg-slate-50/80 p-3 rounded-xl border border-slate-200">
