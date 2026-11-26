@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Stage, Layer, Rect, Transformer, Line } from 'react-konva';
+import { Stage, Layer, Rect, Transformer, Line, Circle } from 'react-konva';
 import Konva from 'konva';
 import { useEditorStore } from '@/store/useEditorStore';
 import { CanvasLayerItem } from './CanvasLayerItem';
 import { CanvasLayer, TextLayer, GroupLayer } from '@/types/editor';
+import { getVisualBounds } from '@/utils/transformUtils';
 
 interface KonvaStageProps {
   onStageReady?: (stage: Konva.Stage | null) => void;
@@ -91,6 +92,7 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
     }
 
     trRef.current.nodes(selectedNodes);
+    trRef.current.forceUpdate();
     trRef.current.getLayer()?.batchDraw();
   }, [selectedLayerIds, layers]);
 
@@ -487,9 +489,43 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
             anchorFill="#FFFFFF"
             anchorSize={Math.max(10, Math.round(12 / Math.max(0.1, zoom)))}
             anchorCornerRadius={Math.max(2, Math.round(3 / Math.max(0.1, zoom)))}
+            anchorStyleFunc={(anchor) => {
+              const primaryLayer = layers.find((l) => l.id === selectedLayerIds[0]);
+              const activeAnchor = primaryLayer?.anchor || 'center';
+              const anchorName = anchor.name() || '';
+              const isCurrentAnchor =
+                activeAnchor !== 'center' && anchorName.includes(activeAnchor);
+
+              if (isCurrentAnchor) {
+                anchor.fill('#2563EB');
+                anchor.stroke('#1D4ED8');
+              } else {
+                anchor.fill('#FFFFFF');
+                anchor.stroke('#7C3AED');
+              }
+            }}
             rotateAnchorOffset={Math.max(20, Math.round(28 / Math.max(0.1, zoom)))}
             keepRatio={true}
           />
+
+          {/* Blue center anchor indicator when current anchor is 'center' */}
+          {selectedLayerIds.length === 1 && (() => {
+            const primaryLayer = layers.find((l) => l.id === selectedLayerIds[0]);
+            if (!primaryLayer || (primaryLayer.anchor || 'center') !== 'center') return null;
+            const vb = getVisualBounds(primaryLayer);
+            const r = Math.max(4, 5 / Math.max(0.1, zoom));
+            return (
+              <Circle
+                x={vb.left + vb.width / 2}
+                y={vb.top + vb.height / 2}
+                radius={r}
+                fill="#2563EB"
+                stroke="#FFFFFF"
+                strokeWidth={Math.max(1.5, 1.5 / Math.max(0.1, zoom))}
+                listening={false}
+              />
+            );
+          })()}
         </Layer>
       </Stage>
     </div>

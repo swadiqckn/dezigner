@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useEditorStore } from '@/store/useEditorStore';
 import { CanvasLayer } from '@/types/editor';
-import AnchorSelector from './AnchorSelector';
 import {
   ArrowUp,
   ArrowDown,
@@ -18,7 +17,6 @@ import {
   AlignEndVertical,
   RotateCcw,
   Crosshair,
-  X,
 } from 'lucide-react';
 
 interface MovementControlsProps {
@@ -29,19 +27,6 @@ interface MovementControlsProps {
 export default function MovementControls({ layer: propLayer, onChange: propOnChange }: MovementControlsProps) {
   const { layers, selectedLayerIds, alignSelected, moveLayersDelta, updateLayer, width, height } = useEditorStore();
   const [alignTarget, setAlignTarget] = useState<'canvas' | 'selection'>('selection');
-  const [anchorPopupOpen, setAnchorPopupOpen] = useState(false);
-  const anchorPopupRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!anchorPopupOpen) return;
-    const handleOutside = (e: MouseEvent) => {
-      if (anchorPopupRef.current && !anchorPopupRef.current.contains(e.target as Node)) {
-        setAnchorPopupOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleOutside);
-    return () => document.removeEventListener('mousedown', handleOutside);
-  }, [anchorPopupOpen]);
 
   const layer = propLayer || layers.find((l) => l.id === selectedLayerIds[0]);
   if (!layer) return null;
@@ -105,10 +90,10 @@ export default function MovementControls({ layer: propLayer, onChange: propOnCha
         </div>
       )}
 
-      {/* Side-by-side 3x3 Move Pad (with Anchor icon in center) & Align Matrix + X/Y */}
+      {/* Side-by-side 3x3 Move Pad (with Center on Canvas in center) & Align Matrix + X/Y */}
       <div className="grid grid-cols-[auto_1fr] gap-2.5 items-center">
-        {/* 3x3 Move D-Pad with Anchor Point Popup Trigger in Center */}
-        <div className="relative" ref={anchorPopupRef}>
+        {/* 3x3 Move D-Pad with Center on Canvas Trigger in Center */}
+        <div className="relative">
           <div className="grid grid-cols-3 gap-1 p-1.5 bg-slate-50 border border-slate-200 rounded-xl">
             <button
               type="button"
@@ -144,16 +129,15 @@ export default function MovementControls({ layer: propLayer, onChange: propOnCha
               <ArrowLeft className="w-3.5 h-3.5" />
             </button>
 
-            {/* Center: Anchor Point Popup Trigger */}
+            {/* Center: Bring to Center of Canvas */}
             <button
               type="button"
-              onClick={() => setAnchorPopupOpen((o) => !o)}
-              title={`Anchor Point: ${(layer.anchor || 'center').replace('-', ' ')} (click to change)`}
-              className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
-                anchorPopupOpen
-                  ? 'bg-purple-600 text-white ring-2 ring-purple-300 shadow-xs'
-                  : 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300'
-              }`}
+              onClick={() => {
+                alignSelected('center', 'canvas');
+                alignSelected('middle', 'canvas');
+              }}
+              title="Bring to Center of Canvas"
+              className="w-6 h-6 rounded-md bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300 flex items-center justify-center transition-all"
             >
               <Crosshair className="w-3.5 h-3.5" />
             </button>
@@ -192,29 +176,6 @@ export default function MovementControls({ layer: propLayer, onChange: propOnCha
               <ArrowDownRight className="w-3 h-3" />
             </button>
           </div>
-
-          {/* Anchor Point Popup */}
-          {anchorPopupOpen && (
-            <div className="absolute left-0 bottom-full mb-2 z-50 w-40 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex items-center justify-between mb-1 px-1">
-                <span className="text-[10px] font-bold text-slate-500 uppercase">Anchor Point</span>
-                <button
-                  type="button"
-                  onClick={() => setAnchorPopupOpen(false)}
-                  className="p-0.5 text-slate-400 hover:text-slate-700 rounded"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-              <AnchorSelector
-                value={layer.anchor || 'center'}
-                onChange={(anchor) => {
-                  onChange({ anchor });
-                }}
-                compact
-              />
-            </div>
-          )}
         </div>
 
         {/* Right: Align Grid (3x2) + X/Y Coordinates */}

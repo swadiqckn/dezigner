@@ -159,11 +159,13 @@ export default function TransformLayoutSection({ layer, onChange }: TransformLay
           </div>
         </div>
 
-        {/* Right: Circular Rotation Slider */}
+        {/* Right: Circular Rotation Slider (with Anchor Point trigger) */}
         <CircularRotationSlider
           value={layer.rotation || 0}
           onChange={(deg) => onChange({ rotation: deg })}
           onReset={() => onChange({ rotation: 0 })}
+          anchor={layer.anchor || 'center'}
+          onAnchorChange={(anchor) => onChange({ anchor })}
         />
       </div>
 

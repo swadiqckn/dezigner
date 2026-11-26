@@ -1,21 +1,40 @@
 'use client';
 
-import React, { useRef } from 'react';
-import { RotateCcw } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import { RotateCcw, Crosshair, X } from 'lucide-react';
+import { AnchorPoint } from '@/types/editor';
+import AnchorSelector from './AnchorSelector';
 
 interface CircularRotationSliderProps {
   value: number;
   onChange: (deg: number) => void;
   onReset?: () => void;
+  anchor?: AnchorPoint;
+  onAnchorChange?: (anchor: AnchorPoint) => void;
 }
 
 export default function CircularRotationSlider({
   value,
   onChange,
   onReset,
+  anchor = 'center',
+  onAnchorChange,
 }: CircularRotationSliderProps) {
   const dialRef = useRef<SVGSVGElement | null>(null);
   const draggingRef = useRef(false);
+  const [anchorPopupOpen, setAnchorPopupOpen] = useState(false);
+  const anchorPopupRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!anchorPopupOpen) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (anchorPopupRef.current && !anchorPopupRef.current.contains(e.target as Node)) {
+        setAnchorPopupOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [anchorPopupOpen]);
 
   const normalized = ((Math.round(value || 0) % 360) + 360) % 360;
 
@@ -37,20 +56,59 @@ export default function CircularRotationSlider({
   const dotY = 32 + 21 * Math.sin(angleRad);
 
   return (
-    <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex flex-col items-center justify-between h-full">
+    <div className="relative bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex flex-col items-center justify-between h-full" ref={anchorPopupRef}>
       <div className="w-full flex items-center justify-between mb-1">
         <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
           Rotate
         </span>
-        <button
-          type="button"
-          onClick={() => (onReset ? onReset() : onChange(0))}
-          title="Reset rotation to 0°"
-          className="p-0.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
-        >
-          <RotateCcw className="w-3 h-3" />
-        </button>
+        <div className="flex items-center gap-0.5">
+          {onAnchorChange && (
+            <button
+              type="button"
+              onClick={() => setAnchorPopupOpen((o) => !o)}
+              title={`Anchor Point: ${anchor.replace('-', ' ')} (click to change)`}
+              className={`p-0.5 rounded transition-colors ${
+                anchorPopupOpen
+                  ? 'bg-blue-600 text-white'
+                  : 'text-blue-600 hover:bg-blue-50'
+              }`}
+            >
+              <Crosshair className="w-3 h-3" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => (onReset ? onReset() : onChange(0))}
+            title="Reset rotation to 0°"
+            className="p-0.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
+          >
+            <RotateCcw className="w-3 h-3" />
+          </button>
+        </div>
       </div>
+
+      {/* Anchor Point Popup */}
+      {anchorPopupOpen && onAnchorChange && (
+        <div className="absolute right-0 top-full mt-1.5 z-50 w-44 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2.5 animate-in fade-in zoom-in-95 duration-150">
+          <div className="flex items-center justify-between mb-1.5 px-1">
+            <span className="text-[10px] font-bold text-slate-600 uppercase">Anchor Point</span>
+            <button
+              type="button"
+              onClick={() => setAnchorPopupOpen(false)}
+              className="p-0.5 text-slate-400 hover:text-slate-700 rounded"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+          <AnchorSelector
+            value={anchor}
+            onChange={(nextAnchor) => {
+              onAnchorChange(nextAnchor);
+            }}
+            compact
+          />
+        </div>
+      )}
 
       <svg
         ref={dialRef}
