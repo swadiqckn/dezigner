@@ -35,6 +35,7 @@ export interface BaseLayer {
   anchor?: AnchorPoint;
   groupId?: string; // If grouped inside a parent group
   opacity?: number; // 0 to 1
+  blendMode?: GlobalCompositeOperation;
   visible?: boolean;
   locked?: boolean; // UX restriction: cannot drag or resize
   deletable?: boolean; // Cannot delete if false (ERP protection)
