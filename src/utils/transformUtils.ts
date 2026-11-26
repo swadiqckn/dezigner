@@ -91,26 +91,24 @@ export function getAlignedPosition(
   canvasHeight: number,
   alignType: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'
 ): { x: number; y: number } {
+  // store x/y is always the TOP-LEFT of the visual bounding box (regardless of anchor or shape type).
+  // anchor only affects the Konva rotation origin, not the stored coordinate convention.
   const { width: w, height: h } = getLayerDimensions(layer);
   const sx = layer.scaleX ?? 1;
   const sy = layer.scaleY ?? 1;
-  const offset = getOffsetForAnchor(layer.anchor, w, h);
+  const visualW = w * sx;
+  const visualH = h * sy;
 
   let newX = layer.x;
   let newY = layer.y;
 
-  const visualW = w * sx;
-  const visualH = h * sy;
-  const scaledOffsetX = offset.x * sx;
-  const scaledOffsetY = offset.y * sy;
+  if (alignType === 'left')   newX = 0;
+  if (alignType === 'center') newX = (canvasWidth  - visualW) / 2;
+  if (alignType === 'right')  newX = canvasWidth  - visualW;
 
-  if (alignType === 'left') newX = scaledOffsetX;
-  if (alignType === 'center') newX = (canvasWidth - visualW) / 2 + scaledOffsetX;
-  if (alignType === 'right') newX = canvasWidth - visualW + scaledOffsetX;
-
-  if (alignType === 'top') newY = scaledOffsetY;
-  if (alignType === 'middle') newY = (canvasHeight - visualH) / 2 + scaledOffsetY;
-  if (alignType === 'bottom') newY = canvasHeight - visualH + scaledOffsetY;
+  if (alignType === 'top')    newY = 0;
+  if (alignType === 'middle') newY = (canvasHeight - visualH) / 2;
+  if (alignType === 'bottom') newY = canvasHeight - visualH;
 
   return { x: Math.round(newX), y: Math.round(newY) };
 }

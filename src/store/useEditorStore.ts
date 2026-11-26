@@ -13,7 +13,7 @@ import {
   DesignComponentFile,
 } from '@/types/editor';
 import { POSTER_TEMPLATES } from '@/constants/templates';
-import { getAlignedPosition, getLayerDimensions, getOffsetForAnchor } from '@/utils/transformUtils';
+import { getAlignedPosition, getLayerDimensions } from '@/utils/transformUtils';
 import { loadGoogleFont } from '@/constants/fonts';
 
 interface HistorySnapshot {
@@ -630,34 +630,21 @@ export const useEditorStore = create<EditorState>((set, get) => {
         }));
       } else {
         // Align relative to visual bounding box of selection.
-        // l.x / l.y is the ANCHOR position, not necessarily the top-left corner.
-        // Use getLayerDimensions + getOffsetForAnchor to find each layer's visual top-left,
-        // then derive new anchor positions after alignment.
+        // store x/y is always the TOP-LEFT of the visual bounding box — no anchor math needed here.
+        // getLayerDimensions returns the actual visual dimensions (measured text, etc.).
         let minX = Infinity;
         let maxX = -Infinity;
         let minY = Infinity;
         let maxY = -Infinity;
 
-        // Helper: visual top-left of a layer given its anchor position and dimensions
-        const getVisualRect = (l: CanvasLayer) => {
+        selectedLayers.forEach((l) => {
           const { width: w, height: h } = getLayerDimensions(l);
           const sx = l.scaleX ?? 1;
           const sy = l.scaleY ?? 1;
-          const visualW = w * sx;
-          const visualH = h * sy;
-          const offset = getOffsetForAnchor(l.anchor, w, h);
-          // l.x is anchor position; top-left = anchor - scaled offset
-          const left = l.x - offset.x * sx;
-          const top  = l.y - offset.y * sy;
-          return { left, top, right: left + visualW, bottom: top + visualH, visualW, visualH, w, h };
-        };
-
-        selectedLayers.forEach((l) => {
-          const r = getVisualRect(l);
-          minX = Math.min(minX, r.left);
-          maxX = Math.max(maxX, r.right);
-          minY = Math.min(minY, r.top);
-          maxY = Math.max(maxY, r.bottom);
+          minX = Math.min(minX, l.x);
+          maxX = Math.max(maxX, l.x + w * sx);
+          minY = Math.min(minY, l.y);
+          maxY = Math.max(maxY, l.y + h * sy);
         });
 
         const selW = maxX - minX;
@@ -670,28 +657,20 @@ export const useEditorStore = create<EditorState>((set, get) => {
           const sy = l.scaleY ?? 1;
           const visualW = w * sx;
           const visualH = h * sy;
-          const offset = getOffsetForAnchor(l.anchor, w, h);
-          const scaledOffX = offset.x * sx;
-          const scaledOffY = offset.y * sy;
 
-          // Current visual top-left of this layer
-          const left = l.x - scaledOffX;
-          const top  = l.y - scaledOffY;
+          // Target top-left after alignment; store it directly
+          let nx = l.x;
+          let ny = l.y;
 
-          // Target visual top-left after alignment
-          let newLeft = left;
-          let newTop  = top;
+          if (type === 'left')   nx = minX;
+          if (type === 'center') nx = minX + (selW - visualW) / 2;
+          if (type === 'right')  nx = maxX - visualW;
+          if (type === 'top')    ny = minY;
+          if (type === 'middle') ny = minY + (selH - visualH) / 2;
+          if (type === 'bottom') ny = maxY - visualH;
 
-          if (type === 'left')   newLeft = minX;
-          if (type === 'center') newLeft = minX + (selW - visualW) / 2;
-          if (type === 'right')  newLeft = maxX - visualW;
-          if (type === 'top')    newTop  = minY;
-          if (type === 'middle') newTop  = minY + (selH - visualH) / 2;
-          if (type === 'bottom') newTop  = maxY - visualH;
-
-          // Convert back to anchor position
-          const nx = Math.round(newLeft + scaledOffX);
-          const ny = Math.round(newTop  + scaledOffY);
+          nx = Math.round(nx);
+          ny = Math.round(ny);
 
           updateMap.set(l.id, { x: nx, y: ny });
           if (l.type === 'group' && Array.isArray((l as GroupLayer).layerIds)) {
