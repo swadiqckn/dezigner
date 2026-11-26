@@ -48,12 +48,24 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
       node.scaleX(1);
       node.scaleY(1);
 
+      const newW = Math.max(10, Math.round(node.width() * scaleX));
+      const newH = Math.max(10, Math.round(node.height() * scaleY));
+
+      // Circle, Star, and RegularPolygon position Konva's (x, y) at their center, while store (x, y) is top-left
+      const isCenterShape =
+        layer.type === 'circle' ||
+        layer.type === 'star' ||
+        (layer.type === 'polygon' &&
+          !['arrow', 'heart', 'cross'].includes((layer as ShapeLayer).shapeVariant || ''));
+
+      const centerOffset = isCenterShape ? Math.min(newW, newH) / 2 : 0;
+
       const updates: Partial<CanvasLayer> = {
-        x: Math.round(node.x()),
-        y: Math.round(node.y()),
+        x: Math.round(node.x() - centerOffset),
+        y: Math.round(node.y() - centerOffset),
         rotation: Math.round(node.rotation()),
-        width: Math.max(10, Math.round(node.width() * scaleX)),
-        height: Math.max(10, Math.round(node.height() * scaleY)),
+        width: newW,
+        height: newH,
         scaleX: 1,
         scaleY: 1,
       };
@@ -64,9 +76,18 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
     // Handle Drag End
     const handleDragEndInternal = (e: Konva.KonvaEventObject<DragEvent>) => {
       const node = e.target;
+      const isCenterShape =
+        layer.type === 'circle' ||
+        layer.type === 'star' ||
+        (layer.type === 'polygon' &&
+          !['arrow', 'heart', 'cross'].includes((layer as ShapeLayer).shapeVariant || ''));
+      const centerOffset = isCenterShape
+        ? Math.min(layer.width, layer.height || layer.width) / 2
+        : 0;
+
       onChange({
-        x: Math.round(node.x()),
-        y: Math.round(node.y()),
+        x: Math.round(node.x() - centerOffset),
+        y: Math.round(node.y() - centerOffset),
       });
       if (onDragEnd) onDragEnd(e);
     };

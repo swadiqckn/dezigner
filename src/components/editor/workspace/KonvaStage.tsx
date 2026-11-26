@@ -147,12 +147,7 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
 
       if (!showGuides) return;
       const guideStops = getLineGuideStops(target.id());
-      const targetBox = {
-        x: target.x(),
-        y: target.y(),
-        width: target.width(),
-        height: target.height(),
-      };
+      const targetBox = target.getClientRect({ relativeTo: layerRef.current || undefined });
 
       const SNAP_TOLERANCE = 8;
       const activeLines: AlignmentLine[] = [];
@@ -167,7 +162,8 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
       for (const pt of snapPointsX) {
         for (const stop of guideStops.vertical) {
           if (Math.abs(pt.objVal - stop) < SNAP_TOLERANCE) {
-            target.x(stop + pt.guideOffset);
+            const snapDx = stop + pt.guideOffset - targetBox.x;
+            target.x(target.x() + snapDx);
             activeLines.push({ orientation: 'vertical', position: stop });
             break;
           }
@@ -184,7 +180,8 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
       for (const pt of snapPointsY) {
         for (const stop of guideStops.horizontal) {
           if (Math.abs(pt.objVal - stop) < SNAP_TOLERANCE) {
-            target.y(stop + pt.guideOffset);
+            const snapDy = stop + pt.guideOffset - targetBox.y;
+            target.y(target.y() + snapDy);
             activeLines.push({ orientation: 'horizontal', position: stop });
             break;
           }
