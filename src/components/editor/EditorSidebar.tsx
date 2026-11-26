@@ -7,14 +7,12 @@ import TextPanel from './sidebar-panels/TextPanel';
 import UploadsPanel from './sidebar-panels/UploadsPanel';
 import BackgroundPanel from './sidebar-panels/BackgroundPanel';
 import LayersPanel from './sidebar-panels/LayersPanel';
-import ErpIntegrationPanel from './sidebar-panels/ErpIntegrationPanel';
 import {
   Shapes,
   Type,
   UploadCloud,
   Palette,
   Layers,
-  Building2,
   ChevronLeft,
 } from 'lucide-react';
 
@@ -31,7 +29,6 @@ export const SIDEBAR_TABS: TabItem[] = [
   { id: 'uploads', label: 'Uploads', icon: UploadCloud },
   { id: 'background', label: 'Background', icon: Palette },
   { id: 'layers', label: 'Layers', icon: Layers },
-  { id: 'erp', label: 'ERP Connect', icon: Building2, badge: 'API' },
 ];
 
 export default function EditorSidebar() {
@@ -99,7 +96,6 @@ export default function EditorSidebar() {
           {activeTab === 'uploads' && <UploadsPanel />}
           {activeTab === 'background' && <BackgroundPanel />}
           {activeTab === 'layers' && <LayersPanel />}
-          {activeTab === 'erp' && <ErpIntegrationPanel />}
         </div>
       )}
     </aside>
