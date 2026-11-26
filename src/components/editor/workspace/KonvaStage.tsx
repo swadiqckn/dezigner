@@ -379,16 +379,21 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
           {/* Canvas Layers */}
           {layers.map((layer) => {
             const isSelected = selectedLayerIds.includes(layer.id);
+            const parentGroup = layers.find(
+              (g) => g.type === 'group' && (g as GroupLayer).layerIds?.includes(layer.id)
+            );
             return (
               <CanvasLayerItem
                 key={layer.id}
                 layer={layer}
                 isSelected={isSelected}
+                isGroupedChild={Boolean(parentGroup)}
                 onSelect={(e) => {
                   e.cancelBubble = true;
                   if (layer.selectable === false) return;
+                  const targetId = parentGroup ? parentGroup.id : layer.id;
                   const isMulti = e.evt.shiftKey;
-                  toggleSelection(layer.id, isMulti);
+                  toggleSelection(targetId, isMulti);
                 }}
                 onChange={(updates) => {
                   if (layer.type === 'group') {

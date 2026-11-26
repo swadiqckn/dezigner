@@ -24,8 +24,10 @@ import {
   FolderMinus,
   PackagePlus,
   PackageCheck,
+  ChevronRight,
+  ChevronDown,
 } from 'lucide-react';
-import { CanvasLayer } from '@/types/editor';
+import { CanvasLayer, GroupLayer } from '@/types/editor';
 
 export default function LayersPanel() {
   const {
@@ -48,6 +50,7 @@ export default function LayersPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -87,8 +90,16 @@ export default function LayersPanel() {
     e.target.value = '';
   };
 
-  // Layers are ordered bottom to top in state, display top to bottom in UI
-  const displayLayers = [...layers].reverse();
+  // Collect all layer IDs that belong to a group so they stay nested inside their group
+  const groupedChildIds = new Set<string>();
+  layers.forEach((l) => {
+    if (l.type === 'group' && Array.isArray((l as GroupLayer).layerIds)) {
+      (l as GroupLayer).layerIds.forEach((cid) => groupedChildIds.add(cid));
+    }
+  });
+
+  // Layers are ordered bottom to top in state, display top to bottom in UI (excluding grouped children at top level)
+  const displayLayers = [...layers].reverse().filter((l) => !groupedChildIds.has(l.id));
 
   const getLayerIcon = (layer: CanvasLayer) => {
     switch (layer.type) {
@@ -180,137 +191,195 @@ export default function LayersPanel() {
             No layers on canvas. Add text, shapes, or images to get started.
           </div>
         ) : (
-          displayLayers.map((layer, index) => {
-            const isSelected = selectedLayerIds.includes(layer.id);
-            const isEditing = editingId === layer.id;
-            const isLocked = layer.locked ?? false;
-            const isVisible = layer.visible !== false;
-            const isProtected = layer.deletable === false;
+          displayLayers.map((layer) => {
+            const renderRow = (item: CanvasLayer, isChild = false) => {
+              const isSelected = selectedLayerIds.includes(item.id);
+              const isEditing = editingId === item.id;
+              const isProtected = item.deletable === false;
+              const isGroup = item.type === 'group';
+              const isExpanded = isGroup && Boolean(expandedGroups[item.id]);
+              const childIds = isGroup ? (item as GroupLayer).layerIds || [] : [];
 
-            return (
-              <div
-                key={layer.id}
-                draggable={!isEditing}
-                onDragStart={(e) => {
-                  setDraggedLayerId(layer.id);
-                  e.dataTransfer.effectAllowed = 'move';
-                  e.dataTransfer.setData('text/plain', layer.id);
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = 'move';
-                  if (draggedLayerId && draggedLayerId !== layer.id) {
-                    setDragOverId(layer.id);
-                  }
-                }}
-                onDragLeave={() => {
-                  if (dragOverId === layer.id) setDragOverId(null);
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const sourceId = draggedLayerId || e.dataTransfer.getData('text/plain');
-                  if (sourceId && sourceId !== layer.id) {
-                    const targetStoreIndex = layers.length - 1 - index;
-                    moveLayerToIndex(sourceId, targetStoreIndex);
-                  }
-                  setDraggedLayerId(null);
-                  setDragOverId(null);
-                }}
-                onDragEnd={() => {
-                  setDraggedLayerId(null);
-                  setDragOverId(null);
-                }}
-                onPointerDown={() => {
-                  if (layer.selectable === false) return;
-                  longPressTimerRef.current = setTimeout(() => {
-                    setMultiSelectMode(true);
-                    toggleSelection(layer.id, true);
-                    longPressTimerRef.current = null;
-                  }, 450);
-                }}
-                onPointerUp={() => {
-                  if (longPressTimerRef.current) {
-                    clearTimeout(longPressTimerRef.current);
-                    longPressTimerRef.current = null;
-                  }
-                }}
-                onPointerLeave={() => {
-                  if (longPressTimerRef.current) {
-                    clearTimeout(longPressTimerRef.current);
-                    longPressTimerRef.current = null;
-                  }
-                }}
-                onClick={(e) => {
-                  if (layer.selectable !== false) {
-                    toggleSelection(layer.id, multiSelectMode || e.shiftKey || e.ctrlKey || e.metaKey);
-                  }
-                }}
-                className={`group px-3 py-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all cursor-grab active:cursor-grabbing ${
-                  dragOverId === layer.id
-                    ? 'border-purple-600 bg-purple-100/70 ring-2 ring-purple-300'
-                    : isSelected
-                    ? 'bg-purple-50/90 border-purple-500 shadow-xs'
-                    : 'bg-white hover:bg-slate-50 border-slate-200'
-                } ${draggedLayerId === layer.id ? 'opacity-50' : ''}`}
-              >
-                {/* Left: Drag Handle, Type Icon & Editable Layer Name */}
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <GripVertical className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
-                  {getLayerIcon(layer)}
+              return (
+                <div
+                  key={item.id}
+                  draggable={!isEditing && !isChild}
+                  onDragStart={(e) => {
+                    if (isChild) return;
+                    setDraggedLayerId(item.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', item.id);
+                  }}
+                  onDragOver={(e) => {
+                    if (isChild) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (draggedLayerId && draggedLayerId !== item.id) {
+                      setDragOverId(item.id);
+                    }
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverId === item.id) setDragOverId(null);
+                  }}
+                  onDrop={(e) => {
+                    if (isChild) return;
+                    e.preventDefault();
+                    const sourceId = draggedLayerId || e.dataTransfer.getData('text/plain');
+                    if (sourceId && sourceId !== item.id) {
+                      const targetStoreIndex = layers.findIndex((l) => l.id === item.id);
+                      if (targetStoreIndex !== -1) {
+                        moveLayerToIndex(sourceId, targetStoreIndex);
+                      }
+                    }
+                    setDraggedLayerId(null);
+                    setDragOverId(null);
+                  }}
+                  onDragEnd={() => {
+                    setDraggedLayerId(null);
+                    setDragOverId(null);
+                  }}
+                  onPointerDown={() => {
+                    if (item.selectable === false) return;
+                    longPressTimerRef.current = setTimeout(() => {
+                      setMultiSelectMode(true);
+                      toggleSelection(item.id, true);
+                      longPressTimerRef.current = null;
+                    }, 450);
+                  }}
+                  onPointerUp={() => {
+                    if (longPressTimerRef.current) {
+                      clearTimeout(longPressTimerRef.current);
+                      longPressTimerRef.current = null;
+                    }
+                  }}
+                  onPointerLeave={() => {
+                    if (longPressTimerRef.current) {
+                      clearTimeout(longPressTimerRef.current);
+                      longPressTimerRef.current = null;
+                    }
+                  }}
+                  onClick={(e) => {
+                    if (item.selectable !== false) {
+                      toggleSelection(item.id, multiSelectMode || e.shiftKey || e.ctrlKey || e.metaKey);
+                    }
+                  }}
+                  className={`group px-2.5 py-2 rounded-xl border flex items-center justify-between gap-2 transition-all ${
+                    isChild ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
+                  } ${
+                    dragOverId === item.id
+                      ? 'border-purple-600 bg-purple-100/70 ring-2 ring-purple-300'
+                      : isSelected
+                      ? 'bg-purple-50/90 border-purple-500 shadow-xs'
+                      : 'bg-white hover:bg-slate-50 border-slate-200'
+                  } ${draggedLayerId === item.id ? 'opacity-50' : ''} ${
+                    item.visible === false ? 'opacity-55' : ''
+                  }`}
+                >
+                  {/* Left: Expand Chevron (for groups), Drag Handle, Type Icon & Editable Layer Name */}
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                    {isGroup ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedGroups((prev) => ({
+                            ...prev,
+                            [item.id]: !prev[item.id],
+                          }));
+                        }}
+                        title={isExpanded ? 'Collapse Group' : 'Expand Group'}
+                        className="p-0.5 rounded text-slate-400 hover:text-purple-700 hover:bg-purple-100 shrink-0 transition-colors"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        ) : (
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    ) : !isChild ? (
+                      <GripVertical className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
+                    ) : null}
 
-                  {isEditing ? (
-                    <input
-                      autoFocus
-                      type="text"
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      onBlur={() => {
-                        if (editingName.trim()) {
-                          renameLayer(layer.id, editingName.trim());
-                        }
-                        setEditingId(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
+                    {getLayerIcon(item)}
+
+                    {isEditing ? (
+                      <input
+                        autoFocus
+                        type="text"
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onBlur={() => {
                           if (editingName.trim()) {
-                            renameLayer(layer.id, editingName.trim());
+                            renameLayer(item.id, editingName.trim());
                           }
                           setEditingId(null);
-                        } else if (e.key === 'Escape') {
-                          setEditingId(null);
-                        }
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-xs p-1 bg-white border border-purple-500 rounded outline-none w-full"
-                    />
-                  ) : (
-                    <div className="min-w-0 flex-1 flex items-center gap-1.5">
-                      <span
-                        className={`text-xs font-medium truncate ${
-                          isSelected ? 'text-purple-950 font-semibold' : 'text-slate-700'
-                        }`}
-                      >
-                        {layer.name}
-                      </span>
-                      {layer.isTemplate && (
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            if (editingName.trim()) {
+                              renameLayer(item.id, editingName.trim());
+                            }
+                            setEditingId(null);
+                          } else if (e.key === 'Escape') {
+                            setEditingId(null);
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs p-1 bg-white border border-purple-500 rounded outline-none w-full"
+                      />
+                    ) : (
+                      <div className="min-w-0 flex-1 flex items-center gap-1.5">
                         <span
-                          className="text-[9px] font-mono font-bold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded shrink-0"
-                          title={`Template Variable: ${layer.templateId || layer.id}`}
+                          className={`text-xs font-medium truncate ${
+                            isSelected ? 'text-purple-950 font-semibold' : 'text-slate-700'
+                          }`}
                         >
-                          {'{'}T{'}'}
+                          {item.name}
                         </span>
-                      )}
-                      {isProtected && (
-                        <span
-                          title="Protected ERP Layer (Non-deletable)"
-                          className="shrink-0 text-indigo-600 bg-indigo-50 p-0.5 rounded"
-                        >
-                          <ShieldCheck className="w-3.5 h-3.5" />
-                        </span>
-                      )}
-                    </div>
-                  )}
+                        {isGroup && (
+                          <span className="text-[9px] font-bold bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-full shrink-0">
+                            {childIds.length}
+                          </span>
+                        )}
+                        {item.isTemplate && (
+                          <span
+                            className="text-[9px] font-mono font-bold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded shrink-0"
+                            title={`Template Variable: ${item.templateId || item.id}`}
+                          >
+                            {'{'}T{'}'}
+                          </span>
+                        )}
+                        {isProtected && (
+                          <span
+                            title="Protected ERP Layer (Non-deletable)"
+                            className="shrink-0 text-indigo-600 bg-indigo-50 p-0.5 rounded"
+                          >
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
+              );
+            };
+
+            const isGroup = layer.type === 'group';
+            const isExpanded = isGroup && Boolean(expandedGroups[layer.id]);
+            const childLayers = isGroup
+              ? [...layers]
+                  .reverse()
+                  .filter((c) => ((layer as GroupLayer).layerIds || []).includes(c.id))
+              : [];
+
+            return (
+              <div key={layer.id} className="space-y-1">
+                {renderRow(layer, false)}
+                {isGroup && isExpanded && childLayers.length > 0 && (
+                  <div className="ml-4 pl-2 border-l-2 border-purple-200 space-y-1">
+                    {childLayers.map((child) => renderRow(child, true))}
+                  </div>
+                )}
               </div>
             );
           })

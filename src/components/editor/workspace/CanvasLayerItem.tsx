@@ -22,6 +22,7 @@ import { loadGoogleFont } from '@/constants/fonts';
 interface CanvasLayerItemProps {
   layer: CanvasLayer;
   isSelected: boolean;
+  isGroupedChild?: boolean;
   onSelect: (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => void;
   onChange: (updates: Partial<CanvasLayer>) => void;
   onDragMove?: (e: Konva.KonvaEventObject<DragEvent>) => void;
@@ -30,11 +31,11 @@ interface CanvasLayerItemProps {
 }
 
 export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps>(
-  ({ layer, onSelect, onChange, onDragMove, onDragEnd, onDoubleClick }, ref) => {
+  ({ layer, isSelected, isGroupedChild, onSelect, onChange, onDragMove, onDragEnd, onDoubleClick }, ref) => {
     // If hidden, do not render
     if (layer.visible === false) return null;
 
-    const isDraggable = !layer.locked;
+    const isDraggable = !layer.locked && (!isGroupedChild || isSelected);
     const itemHeight = layer.height || ((layer as any).fontSize ? (layer as any).fontSize * 1.2 : 50);
     const offset = getOffsetForAnchor(layer.anchor, layer.width, itemHeight);
 

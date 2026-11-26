@@ -445,20 +445,24 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const selectedLayers = layers.filter((l) => selectedLayerIds.includes(l.id));
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       selectedLayers.forEach((l) => {
-        minX = Math.min(minX, l.x);
-        minY = Math.min(minY, l.y);
-        maxX = Math.max(maxX, l.x + (l.width || 0));
-        maxY = Math.max(maxY, l.y + (l.height || (l as any).fontSize || 50));
+        const vb = getVisualBounds(l);
+        minX = Math.min(minX, vb.left);
+        minY = Math.min(minY, vb.top);
+        maxX = Math.max(maxX, vb.right);
+        maxY = Math.max(maxY, vb.bottom);
       });
+      const groupW = Math.max(20, Math.round(maxX - minX));
+      const groupH = Math.max(20, Math.round(maxY - minY));
       const groupId = `group-${Date.now()}`;
       const groupLayer: GroupLayer = {
         id: groupId,
         name: name || `Group ${layers.filter((l) => l.type === 'group').length + 1}`,
         type: 'group',
-        x: Math.round(minX),
-        y: Math.round(minY),
-        width: Math.max(20, Math.round(maxX - minX)),
-        height: Math.max(20, Math.round(maxY - minY)),
+        anchor: 'center',
+        x: Math.round(minX + groupW / 2),
+        y: Math.round(minY + groupH / 2),
+        width: groupW,
+        height: groupH,
         layerIds: [...selectedLayerIds],
         visible: true,
         locked: false,
