@@ -116,15 +116,10 @@ export default function LayersPanel() {
 
   return (
     <div className="flex flex-col h-full space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">
-            Layer Hierarchy
-          </h3>
-          <p className="text-[11px] text-slate-500">
-            {layers.length} layers • Hold Shift to multi-select
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-2 pr-6">
+        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+          Layers
+        </h3>
 
         <div className="flex items-center gap-1 flex-wrap justify-end">
           <input
@@ -140,19 +135,8 @@ export default function LayersPanel() {
             title="Import reusable .dzc component"
           >
             <PackagePlus className="w-3.5 h-3.5 text-purple-600" />
-            <span>Import .dzc</span>
+            <span>Import</span>
           </button>
-
-          {selectedLayerIds.length >= 1 && (
-            <button
-              onClick={() => handleExportComponent()}
-              className="flex items-center gap-1 px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-[10px] font-bold transition-colors"
-              title="Export selected layer(s) or group as reusable .dzc component"
-            >
-              <PackageCheck className="w-3.5 h-3.5 text-purple-600" />
-              <span>Export .dzc</span>
-            </button>
-          )}
 
           <button
             onClick={() => setMultiSelectMode((m) => !m)}
@@ -327,89 +311,86 @@ export default function LayersPanel() {
                     </div>
                   )}
                 </div>
-
-                {/* Right: Quick Actions */}
-                <div className="flex items-center gap-1 shrink-0">
-                  <div className="opacity-0 group-hover:opacity-100 flex items-center transition-opacity">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingId(layer.id);
-                        setEditingName(layer.name);
-                      }}
-                      title="Rename Layer"
-                      className="p-1 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        duplicateLayer(layer.id);
-                      }}
-                      title="Duplicate"
-                      className="p-1 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleExportComponent([layer.id], layer.name);
-                      }}
-                      title="Export as .dzc Component"
-                      className="p-1 hover:bg-purple-100 text-slate-500 hover:text-purple-700 rounded"
-                    >
-                      <PackageCheck className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {/* Lock / Unlock */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleLock(layer.id);
-                    }}
-                    title={isLocked ? 'Unlock Layer' : 'Lock Layer'}
-                    className={`p-1 rounded transition-colors ${
-                      isLocked ? 'text-amber-600 bg-amber-50' : 'text-slate-400 hover:text-slate-700'
-                    }`}
-                  >
-                    {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-                  </button>
-
-                  {/* Visibility */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleVisibility(layer.id);
-                    }}
-                    title={isVisible ? 'Hide Layer' : 'Show Layer'}
-                    className={`p-1 rounded transition-colors ${
-                      !isVisible ? 'text-slate-300' : 'text-slate-400 hover:text-slate-700'
-                    }`}
-                  >
-                    {isVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                  </button>
-
-                  {/* Delete */}
-                  {layer.deletable !== false && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteLayer(layer.id);
-                      }}
-                      title="Delete Layer"
-                      className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
               </div>
             );
           })
         )}
+      </div>
+
+      {/* Bottom Action Rail */}
+      <div className="pt-2 border-t border-slate-100 flex items-center justify-around gap-1 shrink-0">
+        <button
+          type="button"
+          disabled={!selectedLayer}
+          onClick={() => selectedLayer && toggleLock(selectedLayer.id)}
+          title={selectedLayer?.locked ? 'Unlock Layer' : 'Lock Layer'}
+          className={`p-2 rounded-xl border transition-colors disabled:opacity-35 ${
+            selectedLayer?.locked
+              ? 'bg-amber-50 text-amber-600 border-amber-200'
+              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-purple-50 hover:text-purple-700'
+          }`}
+        >
+          {selectedLayer?.locked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+        </button>
+
+        <button
+          type="button"
+          disabled={!selectedLayer}
+          onClick={() => selectedLayer && duplicateLayer(selectedLayer.id)}
+          title="Duplicate Layer"
+          className="p-2 rounded-xl bg-slate-50 text-slate-600 border border-slate-200 hover:bg-purple-50 hover:text-purple-700 transition-colors disabled:opacity-35"
+        >
+          <Copy className="w-4 h-4" />
+        </button>
+
+        <button
+          type="button"
+          disabled={!selectedLayer}
+          onClick={() => selectedLayer && toggleVisibility(selectedLayer.id)}
+          title={selectedLayer?.visible === false ? 'Show Layer' : 'Hide Layer'}
+          className={`p-2 rounded-xl border transition-colors disabled:opacity-35 ${
+            selectedLayer?.visible === false
+              ? 'bg-slate-200 text-slate-500 border-slate-300'
+              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-purple-50 hover:text-purple-700'
+          }`}
+        >
+          {selectedLayer?.visible === false ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </button>
+
+        <button
+          type="button"
+          disabled={!selectedLayer}
+          onClick={() => {
+            if (selectedLayer) {
+              setEditingId(selectedLayer.id);
+              setEditingName(selectedLayer.name);
+            }
+          }}
+          title="Rename Layer"
+          className="p-2 rounded-xl bg-slate-50 text-slate-600 border border-slate-200 hover:bg-purple-50 hover:text-purple-700 transition-colors disabled:opacity-35"
+        >
+          <Edit2 className="w-4 h-4" />
+        </button>
+
+        <button
+          type="button"
+          disabled={selectedLayerIds.length === 0}
+          onClick={() => handleExportComponent()}
+          title="Export as .dzc Component"
+          className="p-2 rounded-xl bg-slate-50 text-slate-600 border border-slate-200 hover:bg-purple-50 hover:text-purple-700 transition-colors disabled:opacity-35"
+        >
+          <PackageCheck className="w-4 h-4" />
+        </button>
+
+        <button
+          type="button"
+          disabled={!selectedLayer || selectedLayer.deletable === false}
+          onClick={() => selectedLayer && deleteLayer(selectedLayer.id)}
+          title="Delete Layer"
+          className="p-2 rounded-xl bg-slate-50 text-rose-600 border border-slate-200 hover:bg-rose-50 transition-colors disabled:opacity-35"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );
