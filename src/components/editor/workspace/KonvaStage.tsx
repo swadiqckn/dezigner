@@ -465,8 +465,8 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
                   : [0, guide.position, width, guide.position]
               }
               stroke="#A855F7"
-              strokeWidth={1.5}
-              dash={[6, 3]}
+              strokeWidth={Math.max(1.5, 1.5 / Math.max(0.1, zoom))}
+              dash={[6 / Math.max(0.1, zoom), 3 / Math.max(0.1, zoom)]}
               listening={false}
             />
           ))}
@@ -481,13 +481,13 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
               return newBox;
             }}
             borderStroke="#7C3AED"
-            borderStrokeWidth={2}
+            borderStrokeWidth={Math.max(2, 2.5 / Math.max(0.1, zoom))}
             anchorStroke="#7C3AED"
-            anchorStrokeWidth={2}
+            anchorStrokeWidth={Math.max(2, 2 / Math.max(0.1, zoom))}
             anchorFill="#FFFFFF"
-            anchorSize={22}
-            anchorCornerRadius={4}
-            rotateAnchorOffset={32}
+            anchorSize={Math.max(10, Math.round(12 / Math.max(0.1, zoom)))}
+            anchorCornerRadius={Math.max(2, Math.round(3 / Math.max(0.1, zoom)))}
+            rotateAnchorOffset={Math.max(20, Math.round(28 / Math.max(0.1, zoom)))}
             keepRatio={true}
           />
         </Layer>
