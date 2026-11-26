@@ -13,9 +13,6 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   ArrowDownRight,
-  AlignLeft,
-  AlignCenterHorizontal,
-  AlignRight,
   AlignStartVertical,
   AlignCenterVertical,
   AlignEndVertical,
@@ -224,12 +221,12 @@ export default function MovementControls({ layer: propLayer, onChange: propOnCha
         <div className="space-y-2">
           <div className="grid grid-cols-3 gap-1">
             {[
-              { id: 'left' as const, icon: AlignLeft, label: 'Align Left' },
-              { id: 'center' as const, icon: AlignCenterHorizontal, label: 'Align Center Horizontally' },
-              { id: 'right' as const, icon: AlignRight, label: 'Align Right' },
-              { id: 'top' as const, icon: AlignStartVertical, label: 'Align Top' },
-              { id: 'middle' as const, icon: AlignCenterVertical, label: 'Align Middle Vertically' },
-              { id: 'bottom' as const, icon: AlignEndVertical, label: 'Align Bottom' },
+              { id: 'top' as const, icon: AlignStartVertical, label: 'Align Top', rotate: true },
+              { id: 'middle' as const, icon: AlignCenterVertical, label: 'Align Middle Vertically', rotate: true },
+              { id: 'bottom' as const, icon: AlignEndVertical, label: 'Align Bottom', rotate: true },
+              { id: 'left' as const, icon: AlignStartVertical, label: 'Align Left', rotate: false },
+              { id: 'center' as const, icon: AlignCenterVertical, label: 'Align Center Horizontally', rotate: false },
+              { id: 'right' as const, icon: AlignEndVertical, label: 'Align Right', rotate: false },
             ].map((btn) => {
               const Icon = btn.icon;
               return (
@@ -240,7 +237,7 @@ export default function MovementControls({ layer: propLayer, onChange: propOnCha
                   title={`${btn.label} (${activeAlignMode})`}
                   className="p-1.5 bg-slate-50 hover:bg-purple-50 text-slate-600 hover:text-purple-700 border border-slate-200 hover:border-purple-300 rounded-lg flex items-center justify-center transition-colors"
                 >
-                  <Icon className="w-3.5 h-3.5" />
+                  <Icon className={`w-3.5 h-3.5 ${btn.rotate ? 'rotate-90' : ''}`} />
                 </button>
               );
             })}
