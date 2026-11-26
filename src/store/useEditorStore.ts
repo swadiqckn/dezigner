@@ -137,6 +137,7 @@ interface EditorState {
   // Clipboard
   copySelected: () => void;
   paste: () => void;
+  pasteStyle: () => void;
 
   // History
   undo: () => void;
@@ -188,6 +189,69 @@ interface EditorState {
 const DEFAULT_WIDTH = 1080;
 const DEFAULT_HEIGHT = 1350;
 const MAX_HISTORY = 35;
+
+/**
+ * Deep-clones a layer (and if it is a GroupLayer, recursively clones all child layers
+ * with fresh IDs and updated groupId/layerIds/originX/originY so duplicates are 100% independent).
+ */
+function cloneLayerTree(
+  layer: CanvasLayer,
+  allLayers: CanvasLayer[],
+  offsetX: number,
+  offsetY: number,
+  suffix: string
+): { added: CanvasLayer[]; rootId: string } {
+  const makeId = (prefix: string) =>
+    `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+  if (layer.type === 'group') {
+    const grp = layer as GroupLayer;
+    const newGroupId = makeId('group');
+    const newChildIds: string[] = [];
+    const addedChildren: CanvasLayer[] = [];
+
+    (grp.layerIds || []).forEach((cid) => {
+      const child = allLayers.find((l) => l.id === cid);
+      if (!child) return;
+      const newChildId = makeId('layer');
+      newChildIds.push(newChildId);
+      addedChildren.push({
+        ...JSON.parse(JSON.stringify(child)),
+        id: newChildId,
+        groupId: newGroupId,
+        x: child.x + offsetX,
+        y: child.y + offsetY,
+        deletable: true,
+      });
+    });
+
+    const clonedGroup: GroupLayer = {
+      ...JSON.parse(JSON.stringify(grp)),
+      id: newGroupId,
+      name: `${grp.name} ${suffix}`.trim(),
+      x: grp.x + offsetX,
+      y: grp.y + offsetY,
+      originX: grp.originX !== undefined ? grp.originX + offsetX : undefined,
+      originY: grp.originY !== undefined ? grp.originY + offsetY : undefined,
+      layerIds: newChildIds,
+      deletable: true,
+    };
+
+    return { added: [...addedChildren, clonedGroup], rootId: newGroupId };
+  }
+
+  const newId = makeId('layer');
+  const cloned: CanvasLayer = {
+    ...JSON.parse(JSON.stringify(layer)),
+    id: newId,
+    groupId: undefined,
+    name: `${layer.name} ${suffix}`.trim(),
+    x: layer.x + offsetX,
+    y: layer.y + offsetY,
+    deletable: true,
+  };
+  return { added: [cloned], rootId: newId };
+}
 
 export const useEditorStore = create<EditorState>((set, get) => {
   const getSnapshot = (): HistorySnapshot => {
@@ -340,23 +404,15 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
 
     duplicateLayer: (id) => {
-      const layer = get().layers.find((l) => l.id === id);
+      const { layers } = get();
+      const layer = layers.find((l) => l.id === id);
       if (!layer) return;
       pushSnapshot();
 
-      const newId = `layer-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-      const duplicated: CanvasLayer = {
-        ...JSON.parse(JSON.stringify(layer)),
-        id: newId,
-        name: `${layer.name} (Copy)`,
-        x: layer.x + 30,
-        y: layer.y + 30,
-        deletable: true,
-      };
-
+      const { added, rootId } = cloneLayerTree(layer, layers, 30, 30, '(Copy)');
       set((state) => ({
-        layers: [...state.layers, duplicated],
-        selectedLayerIds: [newId],
+        layers: [...state.layers, ...added],
+        selectedLayerIds: [rootId],
       }));
     },
 
@@ -371,17 +427,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
       selectedLayerIds.forEach((id) => {
         const layer = layers.find((l) => l.id === id);
         if (layer) {
-          const newId = `layer-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-          const duplicated: CanvasLayer = {
-            ...JSON.parse(JSON.stringify(layer)),
-            id: newId,
-            name: `${layer.name} (Copy)`,
-            x: layer.x + 30,
-            y: layer.y + 30,
-            deletable: true,
-          };
-          newLayersToAdd.push(duplicated);
-          newSelection.push(newId);
+          const { added, rootId } = cloneLayerTree(layer, layers, 30, 30, '(Copy)');
+          newLayersToAdd.push(...added);
+          newSelection.push(rootId);
         }
       });
 
@@ -693,34 +741,126 @@ export const useEditorStore = create<EditorState>((set, get) => {
     copySelected: () => {
       const { layers, selectedLayerIds } = get();
       const selected = layers.filter((l) => selectedLayerIds.includes(l.id));
-      if (selected.length > 0) {
-        set({ clipboard: JSON.parse(JSON.stringify(selected)) });
-      }
+      if (selected.length === 0) return;
+      // Include child layers of any copied groups so paste works even if original group is deleted
+      const toCopy = new Map<string, CanvasLayer>();
+      selected.forEach((l) => {
+        if (l.type === 'group' && Array.isArray((l as GroupLayer).layerIds)) {
+          (l as GroupLayer).layerIds.forEach((cid) => {
+            const child = layers.find((c) => c.id === cid);
+            if (child) toCopy.set(cid, child);
+          });
+        }
+        toCopy.set(l.id, l);
+      });
+      set({ clipboard: JSON.parse(JSON.stringify(Array.from(toCopy.values()))) });
     },
 
     paste: () => {
-      const { clipboard } = get();
+      const { clipboard, layers } = get();
       if (clipboard.length === 0) return;
       pushSnapshot();
 
+      // Only paste top-level items from clipboard (group children are cloned by cloneLayerTree)
+      const groupedChildIds = new Set<string>();
+      clipboard.forEach((item) => {
+        if (item.type === 'group' && Array.isArray((item as GroupLayer).layerIds)) {
+          (item as GroupLayer).layerIds.forEach((cid) => groupedChildIds.add(cid));
+        }
+      });
+
+      const pool = [...clipboard, ...layers];
       const newIds: string[] = [];
-      const newLayers: CanvasLayer[] = clipboard.map((orig) => {
-        const id = `layer-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-        newIds.push(id);
-        return {
-          ...orig,
-          id,
-          name: `${orig.name} (Pasted)`,
-          x: orig.x + 40,
-          y: orig.y + 40,
-          deletable: true,
-        };
+      const newLayers: CanvasLayer[] = [];
+
+      clipboard.forEach((orig) => {
+        if (groupedChildIds.has(orig.id)) return;
+        const { added, rootId } = cloneLayerTree(orig, pool, 40, 40, '(Pasted)');
+        newLayers.push(...added);
+        newIds.push(rootId);
       });
 
       set((state) => ({
         layers: [...state.layers, ...newLayers],
         selectedLayerIds: newIds,
       }));
+    },
+
+    pasteStyle: () => {
+      const { clipboard, layers, selectedLayerIds } = get();
+      if (clipboard.length === 0 || selectedLayerIds.length === 0) return;
+      // Pick the first non-group layer in clipboard (or fallback to clipboard[0])
+      const source = clipboard.find((l) => l.type !== 'group') || clipboard[0];
+      if (!source) return;
+      pushSnapshot();
+
+      const updated = layers.map((target) => {
+        if (!selectedLayerIds.includes(target.id) || target.type === 'group') return target;
+
+        const stylePatch: Record<string, any> = {};
+        const commonKeys = [
+          'opacity',
+          'blendMode',
+          'shadowColor',
+          'shadowBlur',
+          'shadowOffsetX',
+          'shadowOffsetY',
+          'shadowOpacity',
+          'stroke',
+          'strokeWidth',
+          'dash',
+          'cornerRadius',
+          'cornerRadii',
+        ];
+        commonKeys.forEach((k) => {
+          if ((source as any)[k] !== undefined) {
+            stylePatch[k] = (source as any)[k];
+          }
+        });
+
+        const srcColor =
+          source.type === 'text'
+            ? (source as TextLayer).color
+            : (source as any).fill || (source as any).stroke;
+
+        if (target.type === 'text') {
+          if (source.type === 'text') {
+            const textKeys = [
+              'fontFamily',
+              'fontSize',
+              'fontWeight',
+              'fontStyle',
+              'textDecoration',
+              'textAlign',
+              'letterSpacing',
+              'lineHeight',
+              'color',
+              'backgroundColor',
+              'textTransform',
+            ];
+            textKeys.forEach((k) => {
+              if ((source as any)[k] !== undefined) {
+                stylePatch[k] = (source as any)[k];
+              }
+            });
+          } else if (srcColor) {
+            stylePatch.color = srcColor;
+          }
+        } else if (target.type === 'icon') {
+          if (srcColor) {
+            stylePatch.fill = srcColor;
+            stylePatch.stroke = srcColor;
+          }
+        } else if ('fill' in target) {
+          if (srcColor) {
+            stylePatch.fill = srcColor;
+          }
+        }
+
+        return { ...target, ...stylePatch } as CanvasLayer;
+      });
+
+      set({ layers: updated });
     },
 
     undo: () => {

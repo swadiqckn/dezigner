@@ -47,6 +47,7 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
     deleteSelectedLayers,
     copySelected,
     paste,
+    pasteStyle,
     undo,
     redo,
     selectAll,
@@ -202,6 +203,9 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
       } else if (cmdOrCtrl && e.key.toLowerCase() === 'c') {
         e.preventDefault();
         copySelected();
+      } else if (cmdOrCtrl && e.shiftKey && e.key.toLowerCase() === 'v') {
+        e.preventDefault();
+        pasteStyle();
       } else if (cmdOrCtrl && e.key.toLowerCase() === 'v') {
         e.preventDefault();
         paste();
@@ -240,6 +244,7 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
     deleteSelectedLayers,
     copySelected,
     paste,
+    pasteStyle,
     undo,
     redo,
     selectAll,
