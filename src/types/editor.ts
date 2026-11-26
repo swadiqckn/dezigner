@@ -7,6 +7,7 @@ export type LayerType =
   | 'star' 
   | 'polygon' 
   | 'icon' 
+  | 'path'
   | 'badge'
   | 'group';
 
@@ -137,11 +138,26 @@ export interface ShapeLayer extends BaseLayer {
 
 export interface IconLayer extends BaseLayer {
   type: 'icon';
-  iconName: string; // Lucide icon name
-  svgString?: string;
+  iconName: string; // FontAwesome icon name (e.g. "fa-solid fa-phone", "fa-brands fa-instagram", "phone") or legacy Lucide name
+  svgString?: string; // optional legacy fallback
   fill?: string;
   stroke: string;
   strokeWidth?: number;
+}
+
+export interface PathLayer extends BaseLayer {
+  type: 'path';
+  data: string; // SVG path `d` string
+  viewBox?: [number, number, number, number]; // [minX, minY, width, height], defaults to [0, 0, 100, 100]
+  fill: string;
+  stroke?: string;
+  strokeWidth?: number;
+  dash?: number[];
+  shadowColor?: string;
+  shadowBlur?: number;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  shadowOpacity?: number;
 }
 
 export interface BadgeLayer extends BaseLayer {
@@ -160,13 +176,14 @@ export interface GroupLayer extends BaseLayer {
   layerIds: string[]; // IDs of member layers in the group
 }
 
-export type CanvasLayer = TextLayer | ImageLayer | ShapeLayer | IconLayer | BadgeLayer | GroupLayer;
+export type CanvasLayer = TextLayer | ImageLayer | ShapeLayer | IconLayer | PathLayer | BadgeLayer | GroupLayer;
 
 export type NewLayerInput = (
   | Omit<TextLayer, 'id'>
   | Omit<ImageLayer, 'id'>
   | Omit<ShapeLayer, 'id'>
   | Omit<IconLayer, 'id'>
+  | Omit<PathLayer, 'id'>
   | Omit<BadgeLayer, 'id'>
   | Omit<GroupLayer, 'id'>
 ) & { id?: string; height?: number };

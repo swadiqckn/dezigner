@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CanvasLayer, TextLayer, ShapeLayer, ImageLayer, IconLayer, BadgeLayer } from '@/types/editor';
+import { CanvasLayer, TextLayer, ShapeLayer, ImageLayer, IconLayer, PathLayer, BadgeLayer } from '@/types/editor';
 import ColorPickerSection from './ColorPickerSection';
 import { RotateCcw } from 'lucide-react';
 
@@ -61,6 +61,7 @@ export default function PaintAppearanceSection({ layer, onChange }: PaintAppeara
     layer.type === 'circle' ||
     layer.type === 'star' ||
     layer.type === 'polygon' ||
+    layer.type === 'path' ||
     layer.type === 'badge' ||
     layer.type === 'icon';
 
@@ -68,22 +69,22 @@ export default function PaintAppearanceSection({ layer, onChange }: PaintAppeara
     layer.type === 'text'
       ? (layer as TextLayer).color
       : layer.type === 'icon'
-      ? (layer as IconLayer).stroke
-      : (layer as ShapeLayer | BadgeLayer).fill || '#39216C';
+      ? (layer as IconLayer).fill || (layer as IconLayer).stroke || '#39216C'
+      : (layer as ShapeLayer | PathLayer | BadgeLayer).fill || '#39216C';
 
   const handleFillChange = (color: string) => {
     if (layer.type === 'text') {
       onChange({ color } as Partial<TextLayer>);
     } else if (layer.type === 'icon') {
-      onChange({ stroke: color } as Partial<IconLayer>);
+      onChange({ fill: color, stroke: color } as Partial<IconLayer>);
     } else {
       onChange({ fill: color } as Partial<ShapeLayer>);
     }
   };
 
   const hasBorder = layer.type !== 'group' && layer.type !== 'icon';
-  const strokeColor = (layer as ShapeLayer | TextLayer | ImageLayer).stroke || '#0F172A';
-  const strokeWidth = (layer as ShapeLayer | TextLayer | ImageLayer).strokeWidth || 0;
+  const strokeColor = (layer as ShapeLayer | PathLayer | TextLayer | ImageLayer).stroke || '#0F172A';
+  const strokeWidth = (layer as ShapeLayer | PathLayer | TextLayer | ImageLayer).strokeWidth || 0;
   const isBorderEnabled = strokeWidth > 0;
 
   const hasShadow =
@@ -92,7 +93,8 @@ export default function PaintAppearanceSection({ layer, onChange }: PaintAppeara
     layer.type === 'rect' ||
     layer.type === 'circle' ||
     layer.type === 'star' ||
-    layer.type === 'polygon';
+    layer.type === 'polygon' ||
+    layer.type === 'path';
 
   const shadowColor = (layer as any).shadowColor || '#000000';
   const shadowBlur = (layer as any).shadowBlur || 0;

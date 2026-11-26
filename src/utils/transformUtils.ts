@@ -99,6 +99,7 @@ export function getEffectiveAnchorOffset(
     layer.type === 'text' ||
     layer.type === 'image' ||
     layer.type === 'icon' ||
+    layer.type === 'path' ||
     layer.type === 'rect' ||
     layer.type === 'group';
 

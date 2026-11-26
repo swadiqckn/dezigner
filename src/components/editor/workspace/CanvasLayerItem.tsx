@@ -15,9 +15,10 @@ import {
   Path as KonvaPath
 } from 'react-konva';
 import Konva from 'konva';
-import { CanvasLayer, TextLayer, ImageLayer, ShapeLayer, IconLayer, BadgeLayer, GroupLayer } from '@/types/editor';
+import { CanvasLayer, TextLayer, ImageLayer, ShapeLayer, IconLayer, PathLayer, BadgeLayer, GroupLayer } from '@/types/editor';
 import { getOffsetForAnchor, getLayerDimensions } from '@/utils/transformUtils';
 import { loadGoogleFont } from '@/constants/fonts';
+import { resolveFontAwesomeIcon, fontAwesomeIconToSvgMarkup } from '@/utils/fontAwesomeIcons';
 
 interface CanvasLayerItemProps {
   layer: CanvasLayer;
@@ -360,6 +361,62 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
             onDragMove={onDragMove}
             onDragEnd={handleDragEndInternal}
           />
+        );
+      }
+
+      case 'path': {
+        const p = layer as PathLayer;
+        const vb = p.viewBox || [0, 0, 100, 100];
+        const vbMinX = vb[0] ?? 0;
+        const vbMinY = vb[1] ?? 0;
+        const vbW = Math.max(1, vb[2] ?? 100);
+        const vbH = Math.max(1, vb[3] ?? 100);
+        const targetH = layer.height || layer.width;
+        const scaleXFactor = layer.width / vbW;
+        const scaleYFactor = targetH / vbH;
+
+        return (
+          <KonvaGroup
+            ref={ref as React.Ref<Konva.Group>}
+            id={layer.id}
+            name={layer.id}
+            x={layer.x}
+            y={layer.y}
+            width={layer.width}
+            height={targetH}
+            offsetX={offset.x}
+            offsetY={offset.y}
+            scaleX={layer.scaleX ?? 1}
+            scaleY={layer.scaleY ?? 1}
+            rotation={layer.rotation || 0}
+            opacity={layer.opacity ?? 1}
+            globalCompositeOperation={layer.blendMode || 'source-over'}
+            draggable={isDraggable}
+            onClick={onSelect}
+            onTap={onSelect}
+            onTransformEnd={handleTransformEnd}
+            onDragMove={onDragMove}
+            onDragEnd={handleDragEndInternal}
+          >
+            <KonvaPath
+              x={-vbMinX * scaleXFactor}
+              y={-vbMinY * scaleYFactor}
+              data={p.data}
+              scaleX={scaleXFactor}
+              scaleY={scaleYFactor}
+              fill={p.fill}
+              stroke={p.stroke}
+              strokeWidth={p.strokeWidth || 0}
+              dash={p.dash}
+              shadowColor={p.shadowColor}
+              shadowBlur={p.shadowBlur}
+              shadowOffset={{
+                x: p.shadowOffsetX || 0,
+                y: p.shadowOffsetY || 0,
+              }}
+              shadowOpacity={p.shadowOpacity}
+            />
+          </KonvaGroup>
         );
       }
 
@@ -880,15 +937,24 @@ const RenderIconLayer = React.forwardRef<
   const [svgImg, setSvgImg] = useState<HTMLImageElement | null>(null);
 
   useEffect(() => {
-    const IconComp = (LucideIcons as any)[layer.iconName] || LucideIcons.Star;
     const strokeColor = layer.stroke && layer.stroke !== 'transparent' ? layer.stroke : '#39216C';
-    const fillColor = layer.fill && layer.fill !== 'transparent' ? layer.fill : 'none';
-    const strokeW = layer.strokeWidth ?? 2;
+    const faDef = resolveFontAwesomeIcon(layer.iconName);
 
     let markup = '';
-    if (layer.svgString && !layer.iconName) {
+    if (faDef) {
+      const faFill =
+        layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none'
+          ? layer.fill
+          : strokeColor;
+      markup = fontAwesomeIconToSvgMarkup(faDef, faFill);
+    } else if (layer.svgString && !layer.iconName) {
+      const fillColor = layer.fill && layer.fill !== 'transparent' ? layer.fill : 'none';
+      const strokeW = layer.strokeWidth ?? 2;
       markup = `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 24 24" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeW}" stroke-linecap="round" stroke-linejoin="round"><path d="${layer.svgString}"/></svg>`;
     } else {
+      const IconComp = (LucideIcons as any)[layer.iconName] || LucideIcons.Star;
+      const fillColor = layer.fill && layer.fill !== 'transparent' ? layer.fill : 'none';
+      const strokeW = layer.strokeWidth ?? 2;
       const raw = renderToStaticMarkup(
         <IconComp
           width={256}

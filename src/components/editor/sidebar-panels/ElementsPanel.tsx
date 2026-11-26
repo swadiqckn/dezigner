@@ -3,40 +3,32 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useEditorStore } from '@/store/useEditorStore';
 import { SHAPE_PRESETS } from '@/constants/elements';
+import { FA_ICON_CATALOG, FaCategory } from '@/utils/fontAwesomeIcons';
 import * as Icons from 'lucide-react';
 import { Search } from 'lucide-react';
 
-const ALL_LUCIDE_ICON_NAMES: string[] = Object.keys(Icons).filter((key) => {
-  if (
-    key === 'default' ||
-    key === 'icons' ||
-    key === 'createLucideIcon' ||
-    key.endsWith('Icon') ||
-    key.startsWith('Lucide')
-  ) {
-    return false;
-  }
-  const val = (Icons as Record<string, any>)[key];
-  return (typeof val === 'object' || typeof val === 'function') && /^[A-Z]/.test(key);
-});
-
 const ICON_PAGE_SIZE = 60;
+const FA_CATEGORIES: ('all' | FaCategory)[] = ['all', 'solid', 'regular', 'brands'];
 
 export default function ElementsPanel() {
   const { addLayer, width, height } = useEditorStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [iconCategory, setIconCategory] = useState<'all' | FaCategory>('all');
   const [visibleCount, setVisibleCount] = useState(ICON_PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const filteredIcons = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    if (!q) return ALL_LUCIDE_ICON_NAMES;
-    return ALL_LUCIDE_ICON_NAMES.filter((iconName) => iconName.toLowerCase().includes(q));
-  }, [searchTerm]);
+    return FA_ICON_CATALOG.filter((item) => {
+      const matchCat = iconCategory === 'all' || item.category === iconCategory;
+      const matchQuery = !q || item.name.includes(q) || item.id.includes(q);
+      return matchCat && matchQuery;
+    });
+  }, [searchTerm, iconCategory]);
 
   useEffect(() => {
     setVisibleCount(ICON_PAGE_SIZE);
-  }, [searchTerm]);
+  }, [searchTerm, iconCategory]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -62,7 +54,7 @@ export default function ElementsPanel() {
           Design Elements
         </h3>
         <p className="text-[11px] text-slate-500">
-          Add geometric shapes, frames, dividers, and {ALL_LUCIDE_ICON_NAMES.length}+ Lucide icons.
+          Add geometric shapes, frames, dividers, and {FA_ICON_CATALOG.length}+ FontAwesome icons.
         </p>
       </div>
 
@@ -155,42 +147,68 @@ export default function ElementsPanel() {
           <span className="text-[10px] text-slate-400">{filteredIcons.length} icons</span>
         </div>
 
-        <div className="relative mb-3">
+        <div className="relative mb-2">
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search all Lucide icons..."
+            placeholder="Search FontAwesome icons..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full text-xs pl-8 pr-3 py-2 bg-slate-100 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-purple-500 transition-colors"
           />
         </div>
 
+        <div className="flex items-center gap-1 mb-3">
+          {FA_CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setIconCategory(cat)}
+              className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize transition-colors ${
+                iconCategory === cat
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
         <div className="grid grid-cols-4 gap-2">
-          {displayedIcons.map((iconName) => {
-            const IconComponent = (Icons as unknown as Record<string, React.ElementType>)[iconName];
-            if (!IconComponent) return null;
+          {displayedIcons.map((item) => {
+            const [w, h, , , svgPathData] = item.definition.icon;
+            const paths = Array.isArray(svgPathData) ? svgPathData : [svgPathData];
 
             return (
               <button
-                key={iconName}
+                key={item.id}
                 onClick={() => {
                   addLayer({
                     type: 'icon',
-                    name: `${iconName} Icon`,
-                    iconName,
+                    name: item.name,
+                    iconName: item.id,
+                    fill: '#39216C',
                     stroke: '#39216C',
-                    strokeWidth: 2,
-                    x: Math.round(width / 2 - 50),
-                    y: Math.round(height / 2 - 50),
+                    strokeWidth: 0,
+                    x: Math.round(width / 2),
+                    y: Math.round(height / 2),
                     width: 100,
                     height: 100,
                   } as any);
                 }}
-                title={iconName}
+                title={item.id}
                 className="p-2.5 bg-slate-50 hover:bg-purple-50 border border-slate-200 hover:border-purple-300 rounded-xl flex items-center justify-center group transition-all"
               >
-                <IconComponent className="w-5 h-5 text-slate-600 group-hover:text-purple-600 transition-colors" />
+                <svg
+                  viewBox={`0 0 ${w} ${h}`}
+                  className="w-5 h-5 text-slate-600 group-hover:text-purple-600 transition-colors"
+                  fill="currentColor"
+                >
+                  {paths.map((d, idx) => (
+                    <path key={idx} d={d} />
+                  ))}
+                </svg>
               </button>
             );
           })}
