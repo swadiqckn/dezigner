@@ -24,6 +24,7 @@ interface CanvasLayerItemProps {
   layer: CanvasLayer;
   isSelected: boolean;
   isGroupedChild?: boolean;
+  allLayers?: CanvasLayer[];
   childLayers?: CanvasLayer[];
   selectedLayerIds?: string[];
   onChildSelect?: (childId: string, e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => void;
@@ -40,6 +41,7 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
     layer,
     isSelected,
     isGroupedChild,
+    allLayers,
     childLayers,
     selectedLayerIds,
     onChildSelect,
@@ -531,7 +533,10 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
               strokeWidth={isSelected ? 1 : 0}
               dash={isSelected ? [5, 5] : undefined}
             />
-            {(childLayers || []).map((child) => {
+            {(
+              childLayers ||
+              (allLayers || []).filter((c) => (grp.layerIds || []).includes(c.id))
+            ).map((child) => {
               const childSelected = selectedLayerIds?.includes(child.id) ?? false;
               const localChild: CanvasLayer = {
                 ...child,
@@ -544,6 +549,10 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
                   layer={localChild}
                   isSelected={childSelected}
                   isGroupedChild={true}
+                  allLayers={allLayers}
+                  selectedLayerIds={selectedLayerIds}
+                  onChildSelect={onChildSelect}
+                  onChildChange={onChildChange}
                   onSelect={(e) => {
                     e.cancelBubble = true;
                     if (childSelected && onChildSelect) {

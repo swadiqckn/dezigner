@@ -374,6 +374,7 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
                   key={layer.id}
                   layer={layer}
                   isSelected={isSelected}
+                  allLayers={layers}
                   childLayers={childLayers}
                   selectedLayerIds={selectedLayerIds}
                   onChildSelect={(cid, e) => {

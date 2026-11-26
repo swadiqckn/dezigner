@@ -214,16 +214,18 @@ function cloneLayerTree(
     (grp.layerIds || []).forEach((cid) => {
       const child = allLayers.find((l) => l.id === cid);
       if (!child) return;
-      const newChildId = makeId('layer');
-      newChildIds.push(newChildId);
-      addedChildren.push({
-        ...JSON.parse(JSON.stringify(child)),
-        id: newChildId,
-        groupId: newGroupId,
-        x: child.x + offsetX,
-        y: child.y + offsetY,
-        deletable: true,
-      });
+      const { added: childAdded, rootId: clonedChildId } = cloneLayerTree(
+        child,
+        allLayers,
+        offsetX,
+        offsetY,
+        ''
+      );
+      const tagged = childAdded.map((item) =>
+        item.id === clonedChildId ? { ...item, groupId: newGroupId } : item
+      );
+      newChildIds.push(clonedChildId);
+      addedChildren.push(...tagged);
     });
 
     const clonedGroup: GroupLayer = {
@@ -743,17 +745,18 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const { layers, selectedLayerIds } = get();
       const selected = layers.filter((l) => selectedLayerIds.includes(l.id));
       if (selected.length === 0) return;
-      // Include child layers of any copied groups so paste works even if original group is deleted
+      // Recursively include child layers of any copied groups so paste works for nested groups
       const toCopy = new Map<string, CanvasLayer>();
-      selected.forEach((l) => {
+      const collectWithChildren = (l: CanvasLayer) => {
         if (l.type === 'group' && Array.isArray((l as GroupLayer).layerIds)) {
           (l as GroupLayer).layerIds.forEach((cid) => {
             const child = layers.find((c) => c.id === cid);
-            if (child) toCopy.set(cid, child);
+            if (child) collectWithChildren(child);
           });
         }
         toCopy.set(l.id, l);
-      });
+      };
+      selected.forEach(collectWithChildren);
       set({ clipboard: JSON.parse(JSON.stringify(Array.from(toCopy.values()))) });
     },
 
