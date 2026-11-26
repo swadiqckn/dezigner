@@ -13,7 +13,7 @@ import {
   DesignComponentFile,
 } from '@/types/editor';
 import { POSTER_TEMPLATES } from '@/constants/templates';
-import { getAlignedPosition } from '@/utils/transformUtils';
+import { getAlignedPosition, getLayerDimensions, getOffsetForAnchor } from '@/utils/transformUtils';
 import { loadGoogleFont } from '@/constants/fonts';
 
 interface HistorySnapshot {
@@ -629,31 +629,70 @@ export const useEditorStore = create<EditorState>((set, get) => {
           }),
         }));
       } else {
-        // Align relative to bounding box of selection
+        // Align relative to visual bounding box of selection.
+        // l.x / l.y is the ANCHOR position, not necessarily the top-left corner.
+        // Use getLayerDimensions + getOffsetForAnchor to find each layer's visual top-left,
+        // then derive new anchor positions after alignment.
         let minX = Infinity;
         let maxX = -Infinity;
         let minY = Infinity;
         let maxY = -Infinity;
 
+        // Helper: visual top-left of a layer given its anchor position and dimensions
+        const getVisualRect = (l: CanvasLayer) => {
+          const { width: w, height: h } = getLayerDimensions(l);
+          const sx = l.scaleX ?? 1;
+          const sy = l.scaleY ?? 1;
+          const visualW = w * sx;
+          const visualH = h * sy;
+          const offset = getOffsetForAnchor(l.anchor, w, h);
+          // l.x is anchor position; top-left = anchor - scaled offset
+          const left = l.x - offset.x * sx;
+          const top  = l.y - offset.y * sy;
+          return { left, top, right: left + visualW, bottom: top + visualH, visualW, visualH, w, h };
+        };
+
         selectedLayers.forEach((l) => {
-          const lHeight = l.height || ((l as any).fontSize ? (l as any).fontSize * 1.3 : 50);
-          minX = Math.min(minX, l.x);
-          maxX = Math.max(maxX, l.x + l.width);
-          minY = Math.min(minY, l.y);
-          maxY = Math.max(maxY, l.y + lHeight);
+          const r = getVisualRect(l);
+          minX = Math.min(minX, r.left);
+          maxX = Math.max(maxX, r.right);
+          minY = Math.min(minY, r.top);
+          maxY = Math.max(maxY, r.bottom);
         });
+
+        const selW = maxX - minX;
+        const selH = maxY - minY;
 
         const updateMap = new Map<string, { x: number; y: number }>();
         selectedLayers.forEach((l) => {
-          const lHeight = l.height || ((l as any).fontSize ? (l as any).fontSize * 1.3 : 50);
-          let nx = l.x;
-          let ny = l.y;
-          if (type === 'left') nx = minX;
-          if (type === 'center') nx = minX + (maxX - minX - l.width) / 2;
-          if (type === 'right') nx = maxX - l.width;
-          if (type === 'top') ny = minY;
-          if (type === 'middle') ny = minY + (maxY - minY - lHeight) / 2;
-          if (type === 'bottom') ny = maxY - lHeight;
+          const { width: w, height: h } = getLayerDimensions(l);
+          const sx = l.scaleX ?? 1;
+          const sy = l.scaleY ?? 1;
+          const visualW = w * sx;
+          const visualH = h * sy;
+          const offset = getOffsetForAnchor(l.anchor, w, h);
+          const scaledOffX = offset.x * sx;
+          const scaledOffY = offset.y * sy;
+
+          // Current visual top-left of this layer
+          const left = l.x - scaledOffX;
+          const top  = l.y - scaledOffY;
+
+          // Target visual top-left after alignment
+          let newLeft = left;
+          let newTop  = top;
+
+          if (type === 'left')   newLeft = minX;
+          if (type === 'center') newLeft = minX + (selW - visualW) / 2;
+          if (type === 'right')  newLeft = maxX - visualW;
+          if (type === 'top')    newTop  = minY;
+          if (type === 'middle') newTop  = minY + (selH - visualH) / 2;
+          if (type === 'bottom') newTop  = maxY - visualH;
+
+          // Convert back to anchor position
+          const nx = Math.round(newLeft + scaledOffX);
+          const ny = Math.round(newTop  + scaledOffY);
+
           updateMap.set(l.id, { x: nx, y: ny });
           if (l.type === 'group' && Array.isArray((l as GroupLayer).layerIds)) {
             const dx = nx - l.x;
