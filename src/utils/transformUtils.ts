@@ -85,32 +85,107 @@ export function getLayerDimensions(layer: CanvasLayer): { width: number; height:
   };
 }
 
+/**
+ * Returns the visual anchor offset applied by Konva via offsetX/offsetY.
+ * Layers rendered without offsetX/offsetY (circle, star, polygon, line, badge)
+ * always position their top-left at (layer.x, layer.y), so their effective offset is { x: 0, y: 0 }.
+ */
+export function getEffectiveAnchorOffset(
+  layer: CanvasLayer,
+  width: number,
+  height: number
+): { x: number; y: number } {
+  const usesOffset =
+    layer.type === 'text' ||
+    layer.type === 'image' ||
+    layer.type === 'icon' ||
+    layer.type === 'rect' ||
+    layer.type === 'group';
+
+  if (!usesOffset) {
+    return { x: 0, y: 0 };
+  }
+  return getOffsetForAnchor(layer.anchor, width, height);
+}
+
+/**
+ * Computes the actual visual bounding box on canvas for any layer,
+ * accounting for its effective anchor offset and scale.
+ */
+export function getVisualBounds(layer: CanvasLayer): {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  width: number;
+  height: number;
+  scaledOffsetX: number;
+  scaledOffsetY: number;
+} {
+  const { width: w, height: h } = getLayerDimensions(layer);
+  const sx = layer.scaleX ?? 1;
+  const sy = layer.scaleY ?? 1;
+  const visualW = w * sx;
+  const visualH = h * sy;
+  const offset = getEffectiveAnchorOffset(layer, w, h);
+  const scaledOffsetX = offset.x * sx;
+  const scaledOffsetY = offset.y * sy;
+  const left = layer.x - scaledOffsetX;
+  const top = layer.y - scaledOffsetY;
+
+  return {
+    left,
+    top,
+    right: left + visualW,
+    bottom: top + visualH,
+    width: visualW,
+    height: visualH,
+    scaledOffsetX,
+    scaledOffsetY,
+  };
+}
+
+/**
+ * Aligns a layer's visual bounding box within target bounds { minX, minY, maxX, maxY }
+ * and returns the updated store (x, y) anchor coordinates.
+ */
+export function getAlignedPositionInBounds(
+  layer: CanvasLayer,
+  bounds: { minX: number; minY: number; maxX: number; maxY: number },
+  alignType: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'
+): { x: number; y: number } {
+  const vb = getVisualBounds(layer);
+  const boundsW = bounds.maxX - bounds.minX;
+  const boundsH = bounds.maxY - bounds.minY;
+
+  let newLeft = vb.left;
+  let newTop = vb.top;
+
+  if (alignType === 'left') newLeft = bounds.minX;
+  if (alignType === 'center') newLeft = bounds.minX + (boundsW - vb.width) / 2;
+  if (alignType === 'right') newLeft = bounds.maxX - vb.width;
+
+  if (alignType === 'top') newTop = bounds.minY;
+  if (alignType === 'middle') newTop = bounds.minY + (boundsH - vb.height) / 2;
+  if (alignType === 'bottom') newTop = bounds.maxY - vb.height;
+
+  return {
+    x: Math.round(newLeft + vb.scaledOffsetX),
+    y: Math.round(newTop + vb.scaledOffsetY),
+  };
+}
+
 export function getAlignedPosition(
   layer: CanvasLayer,
   canvasWidth: number,
   canvasHeight: number,
   alignType: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'
 ): { x: number; y: number } {
-  // store x/y is always the TOP-LEFT of the visual bounding box (regardless of anchor or shape type).
-  // anchor only affects the Konva rotation origin, not the stored coordinate convention.
-  const { width: w, height: h } = getLayerDimensions(layer);
-  const sx = layer.scaleX ?? 1;
-  const sy = layer.scaleY ?? 1;
-  const visualW = w * sx;
-  const visualH = h * sy;
-
-  let newX = layer.x;
-  let newY = layer.y;
-
-  if (alignType === 'left')   newX = 0;
-  if (alignType === 'center') newX = (canvasWidth  - visualW) / 2;
-  if (alignType === 'right')  newX = canvasWidth  - visualW;
-
-  if (alignType === 'top')    newY = 0;
-  if (alignType === 'middle') newY = (canvasHeight - visualH) / 2;
-  if (alignType === 'bottom') newY = canvasHeight - visualH;
-
-  return { x: Math.round(newX), y: Math.round(newY) };
+  return getAlignedPositionInBounds(
+    layer,
+    { minX: 0, minY: 0, maxX: canvasWidth, maxY: canvasHeight },
+    alignType
+  );
 }
 
 export function recalculatePositionForNewAnchor(

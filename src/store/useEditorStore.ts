@@ -13,7 +13,7 @@ import {
   DesignComponentFile,
 } from '@/types/editor';
 import { POSTER_TEMPLATES } from '@/constants/templates';
-import { getAlignedPosition, getLayerDimensions } from '@/utils/transformUtils';
+import { getAlignedPosition, getAlignedPositionInBounds, getVisualBounds } from '@/utils/transformUtils';
 import { loadGoogleFont } from '@/constants/fonts';
 
 interface HistorySnapshot {
@@ -629,49 +629,24 @@ export const useEditorStore = create<EditorState>((set, get) => {
           }),
         }));
       } else {
-        // Align relative to visual bounding box of selection.
-        // store x/y is always the TOP-LEFT of the visual bounding box — no anchor math needed here.
-        // getLayerDimensions returns the actual visual dimensions (measured text, etc.).
+        // Align relative to visual bounding box of selection (accounting for anchor offsets).
         let minX = Infinity;
         let maxX = -Infinity;
         let minY = Infinity;
         let maxY = -Infinity;
 
         selectedLayers.forEach((l) => {
-          const { width: w, height: h } = getLayerDimensions(l);
-          const sx = l.scaleX ?? 1;
-          const sy = l.scaleY ?? 1;
-          minX = Math.min(minX, l.x);
-          maxX = Math.max(maxX, l.x + w * sx);
-          minY = Math.min(minY, l.y);
-          maxY = Math.max(maxY, l.y + h * sy);
+          const vb = getVisualBounds(l);
+          minX = Math.min(minX, vb.left);
+          maxX = Math.max(maxX, vb.right);
+          minY = Math.min(minY, vb.top);
+          maxY = Math.max(maxY, vb.bottom);
         });
 
-        const selW = maxX - minX;
-        const selH = maxY - minY;
-
+        const selBounds = { minX, minY, maxX, maxY };
         const updateMap = new Map<string, { x: number; y: number }>();
         selectedLayers.forEach((l) => {
-          const { width: w, height: h } = getLayerDimensions(l);
-          const sx = l.scaleX ?? 1;
-          const sy = l.scaleY ?? 1;
-          const visualW = w * sx;
-          const visualH = h * sy;
-
-          // Target top-left after alignment; store it directly
-          let nx = l.x;
-          let ny = l.y;
-
-          if (type === 'left')   nx = minX;
-          if (type === 'center') nx = minX + (selW - visualW) / 2;
-          if (type === 'right')  nx = maxX - visualW;
-          if (type === 'top')    ny = minY;
-          if (type === 'middle') ny = minY + (selH - visualH) / 2;
-          if (type === 'bottom') ny = maxY - visualH;
-
-          nx = Math.round(nx);
-          ny = Math.round(ny);
-
+          const { x: nx, y: ny } = getAlignedPositionInBounds(l, selBounds, type);
           updateMap.set(l.id, { x: nx, y: ny });
           if (l.type === 'group' && Array.isArray((l as GroupLayer).layerIds)) {
             const dx = nx - l.x;
