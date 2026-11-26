@@ -465,7 +465,36 @@ const RenderTextLayer = React.forwardRef<
     onDblClick?: () => void;
   }
 >(({ layer, isDraggable, onSelect, onTransformEnd, onDragMove, onDragEnd, onDblClick }, ref) => {
-  const [, setFontTick] = useState(0);
+  const [fontTick, setFontTick] = useState(0);
+  const localNodeRef = useRef<Konva.Node | null>(null);
+
+  const assignNodeRef = (node: Konva.Node | null) => {
+    localNodeRef.current = node;
+    if (typeof ref === 'function') {
+      ref(node as Konva.Text);
+    } else if (ref && typeof ref === 'object') {
+      (ref as React.MutableRefObject<Konva.Node | null>).current = node;
+    }
+  };
+
+  // Re-measure Konva.Text & force Transformer to update its bounding box
+  const syncTextBoundsAndTransformer = () => {
+    const node = localNodeRef.current;
+    if (!node) return;
+    if (typeof (node as any)._setTextData === 'function') {
+      (node as any)._setTextData();
+    }
+    const konvaLayer = node.getLayer();
+    if (konvaLayer) {
+      konvaLayer.find('Transformer').forEach((tr) => {
+        const transformer = tr as Konva.Transformer;
+        if (transformer.nodes().includes(node)) {
+          transformer.forceUpdate();
+        }
+      });
+      konvaLayer.batchDraw();
+    }
+  };
 
   // Ensure Google Font is loaded and re-measure/redraw once font faces finish loading
   useEffect(() => {
@@ -473,6 +502,9 @@ const RenderTextLayer = React.forwardRef<
     const handleFontsReady = () => {
       if (!cancelled) {
         setFontTick((t) => t + 1);
+        requestAnimationFrame(() => {
+          if (!cancelled) syncTextBoundsAndTransformer();
+        });
       }
     };
 
@@ -488,6 +520,26 @@ const RenderTextLayer = React.forwardRef<
       document.fonts.removeEventListener?.('loadingdone', handleFontsReady);
     };
   }, [layer.fontFamily, layer.text, layer.fontSize]);
+
+  // Keep Konva.Text & Transformer bounds synced whenever text/font properties change
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      syncTextBoundsAndTransformer();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [
+    fontTick,
+    layer.text,
+    layer.fontFamily,
+    layer.fontSize,
+    layer.fontWeight,
+    layer.fontStyle,
+    layer.letterSpacing,
+    layer.lineHeight,
+    layer.autoWidth,
+    layer.width,
+    layer.wordStyles,
+  ]);
 
   let fontStyleString = 'normal';
   if (layer.fontWeight && layer.fontStyle === 'italic') {
@@ -599,7 +651,7 @@ const RenderTextLayer = React.forwardRef<
 
     return (
       <KonvaGroup
-        ref={ref as unknown as React.Ref<Konva.Group>}
+        ref={assignNodeRef}
         id={layer.id}
         name={layer.id}
         x={layer.x}
@@ -650,7 +702,7 @@ const RenderTextLayer = React.forwardRef<
 
   return (
     <KonvaText
-      ref={ref}
+      ref={assignNodeRef}
       id={layer.id}
       name={layer.id}
       text={layer.text}
