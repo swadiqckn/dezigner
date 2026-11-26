@@ -134,6 +134,7 @@ export default function FontSelector({ value, onChange, previewText }: FontSelec
   const { customFonts, addCustomFont } = useEditorStore();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
   const bottomSentinelRef = useRef<HTMLDivElement | null>(null);
 
   const [isOpen, setIsOpen] = useState(false);
@@ -153,7 +154,7 @@ export default function FontSelector({ value, onChange, previewText }: FontSelec
   useEffect(() => {
     if (clientFontsCache) return;
     let active = true;
-    fetch('/api/fonts')
+    fetch('/api/google-fonts')
       .then((r) => r.json())
       .then((data) => {
         if (active && Array.isArray(data.fonts) && data.fonts.length > 0) {
@@ -203,11 +204,18 @@ export default function FontSelector({ value, onChange, previewText }: FontSelec
           setVisibleCount((prev) => Math.min(filteredFonts.length, prev + PAGE_SIZE));
         }
       },
-      { threshold: 0.1 }
+      { root: listRef.current, rootMargin: '80px', threshold: 0.01 }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [isOpen, filteredFonts.length]);
+  }, [isOpen, isExpanded, filteredFonts.length, visibleCount]);
+
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 40) {
+      setVisibleCount((prev) => Math.min(filteredFonts.length, prev + PAGE_SIZE));
+    }
+  };
 
   const displayedFonts = filteredFonts.slice(0, visibleCount);
 
@@ -447,6 +455,8 @@ export default function FontSelector({ value, onChange, previewText }: FontSelec
 
           {/* Font List (loads 40 at a time, auto-loads remaining at bottom) */}
           <div
+            ref={listRef}
+            onScroll={handleListScroll}
             className={`${
               isExpanded ? 'flex-1 min-h-0' : 'max-h-56'
             } overflow-y-auto space-y-0.5 pr-0.5`}
