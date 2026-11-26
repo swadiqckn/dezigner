@@ -12,6 +12,8 @@ import {
   ChevronDown,
   CaseSensitive,
   Type as TypeIcon,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 
 interface FontSelectorProps {
@@ -138,6 +140,8 @@ export default function FontSelector({ value, onChange, previewText }: FontSelec
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>('all');
   const [previewMode, setPreviewMode] = useState<'name' | 'layerText'>('name');
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [expandedRect, setExpandedRect] = useState<{ left: number; width: number } | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [googleFonts, setGoogleFonts] = useState<GoogleFontEntry[]>(
     () =>
@@ -319,9 +323,26 @@ export default function FontSelector({ value, onChange, previewText }: FontSelec
 
       {/* Dropdown Popover */}
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2.5 z-50 space-y-2 animate-in fade-in zoom-in-95 duration-150">
-          {/* Search + Preview Mode Toggle */}
-          <div className="flex items-center gap-1.5">
+        <div
+          style={
+            isExpanded && expandedRect
+              ? {
+                  position: 'fixed',
+                  top: '64px',
+                  bottom: '12px',
+                  left: `${expandedRect.left}px`,
+                  width: `${expandedRect.width}px`,
+                }
+              : undefined
+          }
+          className={`${
+            isExpanded && expandedRect
+              ? 'z-50 flex flex-col'
+              : 'absolute left-0 right-0 top-full mt-1.5 z-50'
+          } bg-white border border-slate-200 rounded-2xl shadow-2xl p-2.5 space-y-2 animate-in fade-in zoom-in-95 duration-150`}
+        >
+          {/* Search + Preview Mode Toggle + Expand Toggle */}
+          <div className="flex items-center gap-1.5 shrink-0">
             <div className="relative flex-1">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
@@ -353,10 +374,32 @@ export default function FontSelector({ value, onChange, previewText }: FontSelec
                 <TypeIcon className="w-4 h-4" />
               )}
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!isExpanded && containerRef.current) {
+                  const r = containerRef.current.getBoundingClientRect();
+                  setExpandedRect({ left: r.left, width: r.width });
+                }
+                setIsExpanded((e) => !e);
+              }}
+              title={isExpanded ? 'Collapse Font Dropdown' : 'Expand Font Dropdown to Top'}
+              className={`p-1.5 rounded-xl border transition-colors shrink-0 ${
+                isExpanded
+                  ? 'bg-purple-600 text-white border-purple-600'
+                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-purple-50 hover:text-purple-700'
+              }`}
+            >
+              {isExpanded ? (
+                <Minimize2 className="w-4 h-4" />
+              ) : (
+                <Maximize2 className="w-4 h-4" />
+              )}
+            </button>
           </div>
 
           {/* Category Filter Pills */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 no-scrollbar">
+          <div className="flex items-center gap-1 overflow-x-auto pb-1 no-scrollbar shrink-0">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}
@@ -403,7 +446,11 @@ export default function FontSelector({ value, onChange, previewText }: FontSelec
           )}
 
           {/* Font List (loads 40 at a time, auto-loads remaining at bottom) */}
-          <div className="max-h-56 overflow-y-auto space-y-0.5 pr-0.5">
+          <div
+            className={`${
+              isExpanded ? 'flex-1 min-h-0' : 'max-h-56'
+            } overflow-y-auto space-y-0.5 pr-0.5`}
+          >
             {displayedFonts.length === 0 ? (
               <div className="py-6 text-center text-[11px] text-slate-400">
                 No fonts match &ldquo;{search}&rdquo;
