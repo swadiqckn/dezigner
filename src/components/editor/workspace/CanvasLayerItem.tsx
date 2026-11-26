@@ -44,10 +44,50 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
       const scaleX = node.scaleX();
       const scaleY = node.scaleY();
 
-      // Reset scale and update actual width/height or scaleX/scaleY
+      // Reset Konva node scale to 1 — bake it into store values below
       node.scaleX(1);
       node.scaleY(1);
 
+      // --- TEXT: bake scale into fontSize (and per-word fontSizes) ---
+      if (layer.type === 'text') {
+        const textLayer = layer as TextLayer;
+        // Use geometric mean of scaleX/scaleY for a single uniform font size.
+        const uniformScale = Math.sqrt(Math.abs(scaleX * scaleY));
+        const newFontSize = Math.max(1, Math.round(textLayer.fontSize * uniformScale));
+
+        const textUpdates: Partial<TextLayer> = {
+          x: Math.round(node.x()),
+          y: Math.round(node.y()),
+          rotation: Math.round(node.rotation()),
+          fontSize: newFontSize,
+          scaleX: 1,
+          scaleY: 1,
+        };
+
+        // Scale per-word font sizes proportionally
+        if (textLayer.wordStyles && Object.keys(textLayer.wordStyles).length > 0) {
+          const scaledWordStyles: typeof textLayer.wordStyles = {};
+          for (const [idx, ws] of Object.entries(textLayer.wordStyles)) {
+            scaledWordStyles[Number(idx)] = {
+              ...ws,
+              ...(ws.fontSize !== undefined
+                ? { fontSize: Math.max(1, Math.round(ws.fontSize * uniformScale)) }
+                : {}),
+            };
+          }
+          textUpdates.wordStyles = scaledWordStyles;
+        }
+
+        // For fixed-width (wrapped) text, also scale the container width
+        if (textLayer.autoWidth === false) {
+          textUpdates.width = Math.max(20, Math.round(node.width() * scaleX));
+        }
+
+        onChange(textUpdates as Partial<CanvasLayer>);
+        return;
+      }
+
+      // --- NON-TEXT: bake scale into width/height ---
       const newW = Math.max(10, Math.round(node.width() * scaleX));
       const newH = Math.max(10, Math.round(node.height() * scaleY));
 
