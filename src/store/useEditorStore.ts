@@ -6,6 +6,7 @@ import {
   PosterTemplate, 
   ERPExternalConfig,
   NewLayerInput,
+  TextLayer,
   GroupLayer,
   CustomFontItem,
   ProjectWorkFile,
