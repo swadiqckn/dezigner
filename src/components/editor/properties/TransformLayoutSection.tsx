@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { useEditorStore } from '@/store/useEditorStore';
 import { CanvasLayer, ImageLayer, ShapeLayer } from '@/types/editor';
 import CircularRotationSlider from './CircularRotationSlider';
-import AnchorSelector from './AnchorSelector';
 import CornerRadiusControls from './CornerRadiusControls';
 import MovementControls from './MovementControls';
 import {
@@ -82,96 +81,93 @@ export default function TransformLayoutSection({ layer, onChange }: TransformLay
 
   return (
     <div className="space-y-4">
-      {/* 1. Merged Scale & Dimensions */}
-      <div className="space-y-2.5">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-            Scale & Dimensions
-          </span>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setLockRatio((r) => !r)}
-              title={lockRatio ? 'Aspect Ratio Locked' : 'Aspect Ratio Unlocked'}
-              className={`p-1 rounded-md transition-colors ${
-                lockRatio
-                  ? 'bg-purple-50 text-purple-700 hover:bg-purple-100'
-                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-              }`}
-            >
-              {lockRatio ? <Link2 className="w-3 h-3" /> : <Unlink2 className="w-3 h-3" />}
-            </button>
+      {/* 1. Scale & Dimensions + Circular Rotation Slider Sideways (2 columns) */}
+      <div className="grid grid-cols-[1.45fr_1fr] gap-2 items-stretch">
+        {/* Left: Scale & Dimensions with Lock icon in center */}
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+              Scale & Size
+            </span>
             <button
               type="button"
               onClick={() => onChange({ scaleX: 1, scaleY: 1 })}
               title="Reset scale to 100%"
-              className="p-1 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-md transition-colors"
+              className="p-0.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
             >
               <RotateCcw className="w-3 h-3" />
             </button>
           </div>
+
+          <div className="relative grid grid-cols-2 gap-1.5">
+            <div className="bg-white border border-slate-200 rounded-lg px-2 py-1">
+              <span className="text-[8px] font-bold text-slate-400 uppercase block">W (px)</span>
+              <input
+                type="number"
+                min={10}
+                value={curWidth}
+                onChange={(e) => handleWidthChange(Number(e.target.value) || 10)}
+                className="w-full text-[11px] font-bold text-slate-800 bg-transparent outline-none"
+              />
+            </div>
+            <div className="bg-white border border-slate-200 rounded-lg px-2 py-1">
+              <span className="text-[8px] font-bold text-slate-400 uppercase block">H (px)</span>
+              <input
+                type="number"
+                min={10}
+                value={curHeight}
+                onChange={(e) => handleHeightChange(Number(e.target.value) || 10)}
+                className="w-full text-[11px] font-bold text-slate-800 bg-transparent outline-none"
+              />
+            </div>
+            <div className="bg-white border border-slate-200 rounded-lg px-2 py-1">
+              <span className="text-[8px] font-bold text-slate-400 uppercase block">SX (%)</span>
+              <input
+                type="number"
+                min={10}
+                max={1000}
+                value={Math.round(curScaleX * 100)}
+                onChange={(e) => handleScaleChange('x', (Number(e.target.value) || 100) / 100)}
+                className="w-full text-[11px] font-bold text-slate-800 bg-transparent outline-none"
+              />
+            </div>
+            <div className="bg-white border border-slate-200 rounded-lg px-2 py-1">
+              <span className="text-[8px] font-bold text-slate-400 uppercase block">SY (%)</span>
+              <input
+                type="number"
+                min={10}
+                max={1000}
+                value={Math.round(curScaleY * 100)}
+                onChange={(e) => handleScaleChange('y', (Number(e.target.value) || 100) / 100)}
+                className="w-full text-[11px] font-bold text-slate-800 bg-transparent outline-none"
+              />
+            </div>
+
+            {/* Lock Ratio Icon centered in the 2x2 Scale & Dimensions grid */}
+            <button
+              type="button"
+              onClick={() => setLockRatio((r) => !r)}
+              title={lockRatio ? 'Aspect Ratio Locked' : 'Aspect Ratio Unlocked'}
+              className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full border shadow-sm flex items-center justify-center transition-colors z-10 ${
+                lockRatio
+                  ? 'bg-purple-600 text-white border-purple-600'
+                  : 'bg-white text-slate-500 border-slate-300 hover:bg-slate-100'
+              }`}
+            >
+              {lockRatio ? <Link2 className="w-3 h-3" /> : <Unlink2 className="w-3 h-3" />}
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <div className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
-            <span className="text-[9px] font-bold text-slate-400 uppercase block">Width (px)</span>
-            <input
-              type="number"
-              min={10}
-              value={curWidth}
-              onChange={(e) => handleWidthChange(Number(e.target.value) || 10)}
-              className="w-full text-xs font-bold text-slate-800 bg-transparent outline-none"
-            />
-          </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
-            <span className="text-[9px] font-bold text-slate-400 uppercase block">Height (px)</span>
-            <input
-              type="number"
-              min={10}
-              value={curHeight}
-              onChange={(e) => handleHeightChange(Number(e.target.value) || 10)}
-              className="w-full text-xs font-bold text-slate-800 bg-transparent outline-none"
-            />
-          </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
-            <span className="text-[9px] font-bold text-slate-400 uppercase block">Scale X (%)</span>
-            <input
-              type="number"
-              min={10}
-              max={1000}
-              value={Math.round(curScaleX * 100)}
-              onChange={(e) => handleScaleChange('x', (Number(e.target.value) || 100) / 100)}
-              className="w-full text-xs font-bold text-slate-800 bg-transparent outline-none"
-            />
-          </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
-            <span className="text-[9px] font-bold text-slate-400 uppercase block">Scale Y (%)</span>
-            <input
-              type="number"
-              min={10}
-              max={1000}
-              value={Math.round(curScaleY * 100)}
-              onChange={(e) => handleScaleChange('y', (Number(e.target.value) || 100) / 100)}
-              className="w-full text-xs font-bold text-slate-800 bg-transparent outline-none"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Rotate (Circular Slider) & Anchor Point in same row 2 columns */}
-      <div className="grid grid-cols-2 gap-2.5 items-stretch">
+        {/* Right: Circular Rotation Slider */}
         <CircularRotationSlider
           value={layer.rotation || 0}
           onChange={(deg) => onChange({ rotation: deg })}
           onReset={() => onChange({ rotation: 0 })}
         />
-        <AnchorSelector
-          value={layer.anchor || 'center'}
-          onChange={(anchor) => onChange({ anchor })}
-        />
       </div>
 
-      {/* 3. Corner Radius (4 independent or locked) */}
+      {/* 2. Corner Radius (4 independent or locked) */}
       {showCornerRadius && (
         <div className="pt-3 border-t border-slate-100">
           <CornerRadiusControls
@@ -182,12 +178,12 @@ export default function TransformLayoutSection({ layer, onChange }: TransformLay
         </div>
       )}
 
-      {/* 4. Move & Align (no duplication) */}
+      {/* 3. Move & Align (with hidden Anchor Point popup triggered from center icon) */}
       <div className="pt-3 border-t border-slate-100">
         <MovementControls layer={layer} onChange={onChange} />
       </div>
 
-      {/* 5. Layer Properties */}
+      {/* 4. Layer Properties */}
       <div className="pt-3 border-t border-slate-100 space-y-2.5">
         <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
           Layer Properties

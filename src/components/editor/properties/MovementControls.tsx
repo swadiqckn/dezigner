@@ -1,13 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useEditorStore } from '@/store/useEditorStore';
 import { CanvasLayer } from '@/types/editor';
+import AnchorSelector from './AnchorSelector';
 import {
   ArrowUp,
   ArrowDown,
   ArrowLeft,
   ArrowRight,
+  ArrowUpLeft,
+  ArrowUpRight,
+  ArrowDownLeft,
+  ArrowDownRight,
   AlignLeft,
   AlignCenterHorizontal,
   AlignRight,
@@ -15,6 +20,8 @@ import {
   AlignCenterVertical,
   AlignEndVertical,
   RotateCcw,
+  Crosshair,
+  X,
 } from 'lucide-react';
 
 interface MovementControlsProps {
@@ -25,6 +32,20 @@ interface MovementControlsProps {
 export default function MovementControls({ layer: propLayer, onChange: propOnChange }: MovementControlsProps) {
   const { layers, selectedLayerIds, alignSelected, moveLayersDelta, updateLayer, width, height } = useEditorStore();
   const [alignTarget, setAlignTarget] = useState<'canvas' | 'selection'>('selection');
+  const [anchorPopupOpen, setAnchorPopupOpen] = useState(false);
+  const anchorPopupRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!anchorPopupOpen) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (anchorPopupRef.current && !anchorPopupRef.current.contains(e.target as Node)) {
+        setAnchorPopupOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [anchorPopupOpen]);
+
   const layer = propLayer || layers.find((l) => l.id === selectedLayerIds[0]);
   if (!layer) return null;
   const onChange = propOnChange || ((updates: Partial<CanvasLayer>) => updateLayer(layer.id, updates, true));
@@ -44,7 +65,7 @@ export default function MovementControls({ layer: propLayer, onChange: propOnCha
   const activeAlignMode = isMulti ? alignTarget : 'canvas';
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 relative">
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
           Move & Align
@@ -87,108 +108,186 @@ export default function MovementControls({ layer: propLayer, onChange: propOnCha
         </div>
       )}
 
-      {/* Align Grid (6 buttons: Left, Center, Right, Top, Middle, Bottom) */}
-      <div className="grid grid-cols-6 gap-1">
-        {[
-          { id: 'left' as const, icon: AlignLeft, label: 'Align Left' },
-          { id: 'center' as const, icon: AlignCenterHorizontal, label: 'Align Center Horizontally' },
-          { id: 'right' as const, icon: AlignRight, label: 'Align Right' },
-          { id: 'top' as const, icon: AlignStartVertical, label: 'Align Top' },
-          { id: 'middle' as const, icon: AlignCenterVertical, label: 'Align Middle Vertically' },
-          { id: 'bottom' as const, icon: AlignEndVertical, label: 'Align Bottom' },
-        ].map((btn) => {
-          const Icon = btn.icon;
-          return (
+      {/* Side-by-side 3x3 Move Pad (with Anchor icon in center) & Align Matrix + X/Y */}
+      <div className="grid grid-cols-[auto_1fr] gap-2.5 items-center">
+        {/* 3x3 Move D-Pad with Anchor Point Popup Trigger in Center */}
+        <div className="relative" ref={anchorPopupRef}>
+          <div className="grid grid-cols-3 gap-1 p-1.5 bg-slate-50 border border-slate-200 rounded-xl">
             <button
-              key={btn.id}
               type="button"
-              onClick={() => alignSelected(btn.id, activeAlignMode)}
-              title={`${btn.label} (${activeAlignMode})`}
-              className="p-2 bg-slate-50 hover:bg-purple-50 text-slate-600 hover:text-purple-700 border border-slate-200 hover:border-purple-300 rounded-lg flex items-center justify-center transition-colors"
+              onClick={() => nudge(-10, -10)}
+              title="Move Top-Left 10px"
+              className="w-6 h-6 rounded-md bg-white hover:bg-purple-50 text-slate-500 hover:text-purple-700 border border-slate-200 flex items-center justify-center transition-colors"
             >
-              <Icon className="w-3.5 h-3.5" />
+              <ArrowUpLeft className="w-3 h-3" />
             </button>
-          );
-        })}
-      </div>
+            <button
+              type="button"
+              onClick={() => nudge(0, -10)}
+              title="Move Up 10px"
+              className="w-6 h-6 rounded-md bg-white hover:bg-purple-50 text-slate-600 hover:text-purple-700 border border-slate-200 flex items-center justify-center transition-colors"
+            >
+              <ArrowUp className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => nudge(10, -10)}
+              title="Move Top-Right 10px"
+              className="w-6 h-6 rounded-md bg-white hover:bg-purple-50 text-slate-500 hover:text-purple-700 border border-slate-200 flex items-center justify-center transition-colors"
+            >
+              <ArrowUpRight className="w-3 h-3" />
+            </button>
 
-      {/* X / Y Coordinates + Nudge Pad */}
-      <div className="flex items-center gap-2">
-        <div className="flex-1 grid grid-cols-2 gap-1.5">
-          <div className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 flex items-center gap-1">
-            <span className="text-[10px] font-bold text-slate-400">X</span>
-            <input
-              type="number"
-              value={Math.round(layer.x)}
-              onChange={(e) => {
-                const nx = Number(e.target.value) || 0;
-                if (layer.type === 'group') {
-                  moveLayersDelta([layer.id], nx - layer.x, 0, true);
-                } else {
-                  onChange({ x: nx });
-                }
-              }}
-              className="w-full text-xs font-bold text-slate-800 bg-transparent outline-none"
-            />
+            <button
+              type="button"
+              onClick={() => nudge(-10, 0)}
+              title="Move Left 10px"
+              className="w-6 h-6 rounded-md bg-white hover:bg-purple-50 text-slate-600 hover:text-purple-700 border border-slate-200 flex items-center justify-center transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Center: Anchor Point Popup Trigger */}
+            <button
+              type="button"
+              onClick={() => setAnchorPopupOpen((o) => !o)}
+              title={`Anchor Point: ${(layer.anchor || 'center').replace('-', ' ')} (click to change)`}
+              className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
+                anchorPopupOpen
+                  ? 'bg-purple-600 text-white ring-2 ring-purple-300 shadow-xs'
+                  : 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300'
+              }`}
+            >
+              <Crosshair className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => nudge(10, 0)}
+              title="Move Right 10px"
+              className="w-6 h-6 rounded-md bg-white hover:bg-purple-50 text-slate-600 hover:text-purple-700 border border-slate-200 flex items-center justify-center transition-colors"
+            >
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => nudge(-10, 10)}
+              title="Move Bottom-Left 10px"
+              className="w-6 h-6 rounded-md bg-white hover:bg-purple-50 text-slate-500 hover:text-purple-700 border border-slate-200 flex items-center justify-center transition-colors"
+            >
+              <ArrowDownLeft className="w-3 h-3" />
+            </button>
+            <button
+              type="button"
+              onClick={() => nudge(0, 10)}
+              title="Move Down 10px"
+              className="w-6 h-6 rounded-md bg-white hover:bg-purple-50 text-slate-600 hover:text-purple-700 border border-slate-200 flex items-center justify-center transition-colors"
+            >
+              <ArrowDown className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => nudge(10, 10)}
+              title="Move Bottom-Right 10px"
+              className="w-6 h-6 rounded-md bg-white hover:bg-purple-50 text-slate-500 hover:text-purple-700 border border-slate-200 flex items-center justify-center transition-colors"
+            >
+              <ArrowDownRight className="w-3 h-3" />
+            </button>
           </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 flex items-center gap-1">
-            <span className="text-[10px] font-bold text-slate-400">Y</span>
-            <input
-              type="number"
-              value={Math.round(layer.y)}
-              onChange={(e) => {
-                const ny = Number(e.target.value) || 0;
-                if (layer.type === 'group') {
-                  moveLayersDelta([layer.id], 0, ny - layer.y, true);
-                } else {
-                  onChange({ y: ny });
-                }
-              }}
-              className="w-full text-xs font-bold text-slate-800 bg-transparent outline-none"
-            />
-          </div>
+
+          {/* Anchor Point Popup */}
+          {anchorPopupOpen && (
+            <div className="absolute left-0 bottom-full mb-2 z-50 w-40 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between mb-1 px-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Anchor Point</span>
+                <button
+                  type="button"
+                  onClick={() => setAnchorPopupOpen(false)}
+                  className="p-0.5 text-slate-400 hover:text-slate-700 rounded"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+              <AnchorSelector
+                value={layer.anchor || 'center'}
+                onChange={(anchor) => {
+                  onChange({ anchor });
+                }}
+                compact
+              />
+            </div>
+          )}
         </div>
 
-        {/* Compact Nudge Buttons */}
-        <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg">
-          <button
-            type="button"
-            onClick={() => nudge(-10, 0)}
-            title="Nudge Left 10px"
-            className="p-1.5 hover:bg-white rounded text-slate-600 hover:text-purple-700"
-          >
-            <ArrowLeft className="w-3 h-3" />
-          </button>
-          <button
-            type="button"
-            onClick={() => nudge(0, -10)}
-            title="Nudge Up 10px"
-            className="p-1.5 hover:bg-white rounded text-slate-600 hover:text-purple-700"
-          >
-            <ArrowUp className="w-3 h-3" />
-          </button>
-          <button
-            type="button"
-            onClick={() => nudge(0, 10)}
-            title="Nudge Down 10px"
-            className="p-1.5 hover:bg-white rounded text-slate-600 hover:text-purple-700"
-          >
-            <ArrowDown className="w-3 h-3" />
-          </button>
-          <button
-            type="button"
-            onClick={() => nudge(10, 0)}
-            title="Nudge Right 10px"
-            className="p-1.5 hover:bg-white rounded text-slate-600 hover:text-purple-700"
-          >
-            <ArrowRight className="w-3 h-3" />
-          </button>
+        {/* Right: Align Grid (3x2) + X/Y Coordinates */}
+        <div className="space-y-2">
+          <div className="grid grid-cols-3 gap-1">
+            {[
+              { id: 'left' as const, icon: AlignLeft, label: 'Align Left' },
+              { id: 'center' as const, icon: AlignCenterHorizontal, label: 'Align Center Horizontally' },
+              { id: 'right' as const, icon: AlignRight, label: 'Align Right' },
+              { id: 'top' as const, icon: AlignStartVertical, label: 'Align Top' },
+              { id: 'middle' as const, icon: AlignCenterVertical, label: 'Align Middle Vertically' },
+              { id: 'bottom' as const, icon: AlignEndVertical, label: 'Align Bottom' },
+            ].map((btn) => {
+              const Icon = btn.icon;
+              return (
+                <button
+                  key={btn.id}
+                  type="button"
+                  onClick={() => alignSelected(btn.id, activeAlignMode)}
+                  title={`${btn.label} (${activeAlignMode})`}
+                  className="p-1.5 bg-slate-50 hover:bg-purple-50 text-slate-600 hover:text-purple-700 border border-slate-200 hover:border-purple-300 rounded-lg flex items-center justify-center transition-colors"
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 flex items-center gap-1">
+              <span className="text-[10px] font-bold text-slate-400">X</span>
+              <input
+                type="number"
+                value={Math.round(layer.x)}
+                onChange={(e) => {
+                  const nx = Number(e.target.value) || 0;
+                  if (layer.type === 'group') {
+                    moveLayersDelta([layer.id], nx - layer.x, 0, true);
+                  } else {
+                    onChange({ x: nx });
+                  }
+                }}
+                className="w-full text-xs font-bold text-slate-800 bg-transparent outline-none"
+              />
+            </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 flex items-center gap-1">
+              <span className="text-[10px] font-bold text-slate-400">Y</span>
+              <input
+                type="number"
+                value={Math.round(layer.y)}
+                onChange={(e) => {
+                  const ny = Number(e.target.value) || 0;
+                  if (layer.type === 'group') {
+                    moveLayersDelta([layer.id], 0, ny - layer.y, true);
+                  } else {
+                    onChange({ y: ny });
+                  }
+                }}
+                className="w-full text-xs font-bold text-slate-800 bg-transparent outline-none"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Quick Center */}
       <div className="flex items-center justify-between text-[10px] text-slate-400 px-0.5">
         <span>Canvas: {width}×{height}px</span>
+        <span className="capitalize text-purple-600 font-semibold">
+          Anchor: {(layer.anchor || 'center').replace('-', ' ')}
+        </span>
       </div>
     </div>
   );
