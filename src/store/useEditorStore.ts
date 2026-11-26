@@ -13,7 +13,7 @@ import {
   DesignComponentFile,
 } from '@/types/editor';
 import { POSTER_TEMPLATES } from '@/constants/templates';
-import { getAlignedPosition, getAlignedPositionInBounds, getVisualBounds } from '@/utils/transformUtils';
+import { getAlignedPosition, getAlignedPositionInBounds, getOffsetForAnchor, getVisualBounds } from '@/utils/transformUtils';
 import { loadGoogleFont } from '@/constants/fonts';
 
 interface HistorySnapshot {
@@ -461,8 +461,12 @@ export const useEditorStore = create<EditorState>((set, get) => {
         anchor: 'center',
         x: Math.round(minX + groupW / 2),
         y: Math.round(minY + groupH / 2),
+        originX: Math.round(minX),
+        originY: Math.round(minY),
         width: groupW,
         height: groupH,
+        scaleX: 1,
+        scaleY: 1,
         layerIds: [...selectedLayerIds],
         visible: true,
         locked: false,
@@ -482,13 +486,46 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
     ungroupLayer: (groupId) => {
       const { layers } = get();
-      const group = layers.find((l) => l.id === groupId);
+      const group = layers.find((l) => l.id === groupId) as GroupLayer | undefined;
       if (!group || group.type !== 'group') return;
       pushSnapshot();
-      const childIds = (group as GroupLayer).layerIds || [];
+      const childIds = group.layerIds || [];
+      const gOff = getOffsetForAnchor(group.anchor, group.width, group.height || group.width);
+      const originX = group.originX ?? (group.x - gOff.x);
+      const originY = group.originY ?? (group.y - gOff.y);
+      const sx = group.scaleX ?? 1;
+      const sy = group.scaleY ?? 1;
+      const rot = group.rotation || 0;
+      const rad = (rot * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+
       const updatedLayers = layers
         .filter((l) => l.id !== groupId)
-        .map((l) => (l.groupId === groupId ? { ...l, groupId: undefined } : l));
+        .map((l) => {
+          if (l.groupId !== groupId && !childIds.includes(l.id)) return l;
+          // Convert child from group-local coordinates back to world canvas coordinates
+          const lx = (l.x - originX) - gOff.x;
+          const ly = (l.y - originY) - gOff.y;
+          const wx = Math.round(group.x + (lx * sx * cos - ly * sy * sin));
+          const wy = Math.round(group.y + (lx * sx * sin + ly * sy * cos));
+
+          const next: any = {
+            ...l,
+            groupId: undefined,
+            x: wx,
+            y: wy,
+            rotation: Math.round((l.rotation || 0) + rot),
+          };
+          if (l.type === 'text') {
+            const uniform = Math.sqrt(Math.abs(sx * sy));
+            next.fontSize = Math.max(1, Math.round(l.fontSize * uniform));
+          } else {
+            next.width = Math.max(10, Math.round(l.width * sx));
+            if (l.height) next.height = Math.max(10, Math.round(l.height * sy));
+          }
+          return next as CanvasLayer;
+        });
       set({
         layers: updatedLayers,
         selectedLayerIds: childIds,
@@ -614,16 +651,6 @@ export const useEditorStore = create<EditorState>((set, get) => {
         selectedLayers.forEach((item) => {
           const { x: newX, y: newY } = getAlignedPosition(item, width, height, type);
           updateMap.set(item.id, { x: newX, y: newY });
-          if (item.type === 'group' && Array.isArray((item as GroupLayer).layerIds)) {
-            const dx = newX - item.x;
-            const dy = newY - item.y;
-            (item as GroupLayer).layerIds.forEach((cid) => {
-              const child = layers.find((l) => l.id === cid);
-              if (child) {
-                updateMap.set(cid, { x: child.x + dx, y: child.y + dy });
-              }
-            });
-          }
         });
 
         set((state) => ({
@@ -652,16 +679,6 @@ export const useEditorStore = create<EditorState>((set, get) => {
         selectedLayers.forEach((l) => {
           const { x: nx, y: ny } = getAlignedPositionInBounds(l, selBounds, type);
           updateMap.set(l.id, { x: nx, y: ny });
-          if (l.type === 'group' && Array.isArray((l as GroupLayer).layerIds)) {
-            const dx = nx - l.x;
-            const dy = ny - l.y;
-            (l as GroupLayer).layerIds.forEach((cid) => {
-              const child = layers.find((c) => c.id === cid);
-              if (child) {
-                updateMap.set(cid, { x: child.x + dx, y: child.y + dy });
-              }
-            });
-          }
         });
 
         set((state) => ({

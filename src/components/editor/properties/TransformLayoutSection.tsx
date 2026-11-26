@@ -41,13 +41,21 @@ export default function TransformLayoutSection({ layer, onChange }: TransformLay
 
   const [lockRatio, setLockRatio] = useState(true);
 
-  const curWidth = Math.round(layer.width || 100);
-  const curHeight = Math.round(layer.height || ((layer as any).fontSize ? (layer as any).fontSize * 1.3 : 100));
+  const isGroup = layer.type === 'group';
+  const baseW = Math.round(layer.width || 100);
+  const baseH = Math.round(layer.height || ((layer as any).fontSize ? (layer as any).fontSize * 1.3 : 100));
   const curScaleX = Number((layer.scaleX ?? 1).toFixed(2));
   const curScaleY = Number((layer.scaleY ?? 1).toFixed(2));
+  const curWidth = isGroup ? Math.round(baseW * (layer.scaleX ?? 1)) : baseW;
+  const curHeight = isGroup ? Math.round(baseH * (layer.scaleY ?? 1)) : baseH;
 
   const handleWidthChange = (newW: number) => {
     const w = Math.max(10, Math.round(newW));
+    if (isGroup && baseW > 0) {
+      const nextSX = Number((w / baseW).toFixed(4));
+      onChange(lockRatio ? { scaleX: nextSX, scaleY: nextSX } : { scaleX: nextSX });
+      return;
+    }
     if (lockRatio && curWidth > 0) {
       const ratio = curHeight / curWidth;
       onChange({ width: w, height: Math.max(10, Math.round(w * ratio)) });
@@ -58,6 +66,11 @@ export default function TransformLayoutSection({ layer, onChange }: TransformLay
 
   const handleHeightChange = (newH: number) => {
     const h = Math.max(10, Math.round(newH));
+    if (isGroup && baseH > 0) {
+      const nextSY = Number((h / baseH).toFixed(4));
+      onChange(lockRatio ? { scaleX: nextSY, scaleY: nextSY } : { scaleY: nextSY });
+      return;
+    }
     if (lockRatio && curHeight > 0) {
       const ratio = curWidth / curHeight;
       onChange({ height: h, width: Math.max(10, Math.round(h * ratio)) });

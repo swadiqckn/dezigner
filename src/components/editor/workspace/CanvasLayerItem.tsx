@@ -24,6 +24,10 @@ interface CanvasLayerItemProps {
   layer: CanvasLayer;
   isSelected: boolean;
   isGroupedChild?: boolean;
+  childLayers?: CanvasLayer[];
+  selectedLayerIds?: string[];
+  onChildSelect?: (childId: string, e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => void;
+  onChildChange?: (childId: string, updates: Partial<CanvasLayer>) => void;
   onSelect: (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => void;
   onChange: (updates: Partial<CanvasLayer>) => void;
   onDragMove?: (e: Konva.KonvaEventObject<DragEvent>) => void;
@@ -32,7 +36,20 @@ interface CanvasLayerItemProps {
 }
 
 export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps>(
-  ({ layer, isSelected, isGroupedChild, onSelect, onChange, onDragMove, onDragEnd, onDoubleClick }, ref) => {
+  ({
+    layer,
+    isSelected,
+    isGroupedChild,
+    childLayers,
+    selectedLayerIds,
+    onChildSelect,
+    onChildChange,
+    onSelect,
+    onChange,
+    onDragMove,
+    onDragEnd,
+    onDoubleClick,
+  }, ref) => {
     // If hidden, do not render
     if (layer.visible === false) return null;
 
@@ -45,6 +62,18 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
       const node = e.target;
       const scaleX = node.scaleX();
       const scaleY = node.scaleY();
+
+      // --- GROUP (Smart Object style): preserve scaleX/scaleY on KonvaGroup so all children scale proportionally ---
+      if (layer.type === 'group') {
+        onChange({
+          x: Math.round(node.x()),
+          y: Math.round(node.y()),
+          rotation: Math.round(node.rotation()),
+          scaleX: Number(scaleX.toFixed(4)),
+          scaleY: Number(scaleY.toFixed(4)),
+        });
+        return;
+      }
 
       // Reset Konva node scale to 1 — bake it into store values below
       node.scaleX(1);
@@ -467,6 +496,9 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
       }
 
       case 'group': {
+        const grp = layer as GroupLayer;
+        const originX = grp.originX ?? (layer.x - offset.x);
+        const originY = grp.originY ?? (layer.y - offset.y);
         return (
           <KonvaGroup
             ref={ref as React.Ref<Konva.Group>}
@@ -490,14 +522,46 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
             onDragMove={onDragMove}
             onDragEnd={handleDragEndInternal}
           >
+            {/* Transparent hit area for dragging anywhere inside group */}
             <KonvaRect
               width={layer.width}
               height={layer.height || 50}
               fill="transparent"
-              stroke="#A855F7"
-              strokeWidth={1}
-              dash={[5, 5]}
+              stroke={isSelected ? '#A855F7' : undefined}
+              strokeWidth={isSelected ? 1 : 0}
+              dash={isSelected ? [5, 5] : undefined}
             />
+            {(childLayers || []).map((child) => {
+              const childSelected = selectedLayerIds?.includes(child.id) ?? false;
+              const localChild: CanvasLayer = {
+                ...child,
+                x: child.x - originX,
+                y: child.y - originY,
+              };
+              return (
+                <CanvasLayerItem
+                  key={child.id}
+                  layer={localChild}
+                  isSelected={childSelected}
+                  isGroupedChild={true}
+                  onSelect={(e) => {
+                    e.cancelBubble = true;
+                    if (childSelected && onChildSelect) {
+                      onChildSelect(child.id, e);
+                    } else {
+                      onSelect(e);
+                    }
+                  }}
+                  onChange={(updates) => {
+                    if (!onChildChange) return;
+                    const mappedUpdates = { ...updates };
+                    if (mappedUpdates.x !== undefined) mappedUpdates.x = mappedUpdates.x + originX;
+                    if (mappedUpdates.y !== undefined) mappedUpdates.y = mappedUpdates.y + originY;
+                    onChildChange(child.id, mappedUpdates);
+                  }}
+                />
+              );
+            })}
           </KonvaGroup>
         );
       }

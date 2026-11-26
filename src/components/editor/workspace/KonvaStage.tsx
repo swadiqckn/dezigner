@@ -117,35 +117,6 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
   const handleDragMove = useCallback(
     (e: Konva.KonvaEventObject<DragEvent>) => {
       const target = e.target;
-      const draggedId = target.id();
-      const draggedLayer = layers.find((l) => l.id === draggedId);
-
-      // Real-time child movement preview when dragging a Group layer
-      if (draggedLayer && draggedLayer.type === 'group' && stageRef.current) {
-        if (!groupDragOriginRef.current || groupDragOriginRef.current.groupId !== draggedId) {
-          const childOrigins: Record<string, { x: number; y: number }> = {};
-          ((draggedLayer as GroupLayer).layerIds || []).forEach((cid) => {
-            const c = layers.find((l) => l.id === cid);
-            if (c) childOrigins[cid] = { x: c.x, y: c.y };
-          });
-          groupDragOriginRef.current = {
-            groupId: draggedId,
-            groupX: draggedLayer.x,
-            groupY: draggedLayer.y,
-            children: childOrigins,
-          };
-        }
-        const origin = groupDragOriginRef.current;
-        const dx = target.x() - origin.groupX;
-        const dy = target.y() - origin.groupY;
-        Object.entries(origin.children).forEach(([cid, pos]) => {
-          const childNode = stageRef.current?.findOne(`#${cid}`);
-          if (childNode) {
-            childNode.x(pos.x + dx);
-            childNode.y(pos.y + dy);
-          }
-        });
-      }
 
       if (!showGuides) return;
       const guideStops = getLineGuideStops(target.id());
@@ -376,91 +347,54 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
           {/* Grid lines */}
           {renderGridLines()}
 
-          {/* Canvas Layers */}
-          {layers.map((layer) => {
-            const isSelected = selectedLayerIds.includes(layer.id);
-            const parentGroup = layers.find(
-              (g) => g.type === 'group' && (g as GroupLayer).layerIds?.includes(layer.id)
-            );
-            return (
-              <CanvasLayerItem
-                key={layer.id}
-                layer={layer}
-                isSelected={isSelected}
-                isGroupedChild={Boolean(parentGroup)}
-                onSelect={(e) => {
-                  e.cancelBubble = true;
-                  if (layer.selectable === false) return;
-                  const targetId = parentGroup ? parentGroup.id : layer.id;
-                  const isMulti = e.evt.shiftKey;
-                  toggleSelection(targetId, isMulti);
-                }}
-                onChange={(updates) => {
-                  if (layer.type === 'group') {
-                    const childIds = (layer as GroupLayer).layerIds || [];
-                    const dx = updates.x !== undefined ? updates.x - layer.x : 0;
-                    const dy = updates.y !== undefined ? updates.y - layer.y : 0;
-                    const dRot = updates.rotation !== undefined ? updates.rotation - (layer.rotation || 0) : 0;
-                    const sxRatio =
-                      updates.width !== undefined && layer.width
-                        ? updates.width / layer.width
-                        : updates.scaleX !== undefined
-                        ? updates.scaleX / (layer.scaleX ?? 1)
-                        : 1;
-                    const syRatio =
-                      updates.height !== undefined && layer.height
-                        ? updates.height / layer.height
-                        : updates.scaleY !== undefined
-                        ? updates.scaleY / (layer.scaleY ?? 1)
-                        : 1;
+          {/* Canvas Layers (grouped children render inside their parent KonvaGroup like a Smart Object) */}
+          {(() => {
+            const groupedChildIds = new Set<string>();
+            layers.forEach((l) => {
+              if (l.type === 'group' && Array.isArray((l as GroupLayer).layerIds)) {
+                (l as GroupLayer).layerIds.forEach((cid) => groupedChildIds.add(cid));
+              }
+            });
 
-                    updateLayer(layer.id, updates, false);
-                    childIds.forEach((cid) => {
-                      const child = layers.find((l) => l.id === cid);
-                      if (!child) return;
-                      const childUpdates: Partial<CanvasLayer> = {};
-                      if (dx !== 0 || dy !== 0) {
-                        childUpdates.x = child.x + dx;
-                        childUpdates.y = child.y + dy;
-                      }
-                      if (updates.opacity !== undefined) {
-                        childUpdates.opacity = updates.opacity;
-                      }
-                      if (sxRatio !== 1 || syRatio !== 1) {
-                        childUpdates.x = Math.round(layer.x + (child.x - layer.x) * sxRatio);
-                        childUpdates.y = Math.round(layer.y + (child.y - layer.y) * syRatio);
-                        childUpdates.width = Math.max(10, Math.round(child.width * sxRatio));
-                        if (child.height) {
-                          childUpdates.height = Math.max(10, Math.round(child.height * syRatio));
-                        }
-                      }
-                      if (dRot !== 0) {
-                        const rad = (dRot * Math.PI) / 180;
-                        const relX = child.x - layer.x;
-                        const relY = child.y - layer.y;
-                        childUpdates.x = Math.round(layer.x + relX * Math.cos(rad) - relY * Math.sin(rad));
-                        childUpdates.y = Math.round(layer.y + relX * Math.sin(rad) + relY * Math.cos(rad));
-                        childUpdates.rotation = Math.round((child.rotation || 0) + dRot);
-                      }
-                      if (Object.keys(childUpdates).length > 0) {
-                        updateLayer(cid, childUpdates, false);
-                      }
-                    });
-                    commitSnapshot();
-                  } else {
+            return layers.map((layer) => {
+              if (groupedChildIds.has(layer.id)) return null;
+              const isSelected = selectedLayerIds.includes(layer.id);
+              const childLayers =
+                layer.type === 'group'
+                  ? layers.filter((c) => ((layer as GroupLayer).layerIds || []).includes(c.id))
+                  : undefined;
+
+              return (
+                <CanvasLayerItem
+                  key={layer.id}
+                  layer={layer}
+                  isSelected={isSelected}
+                  childLayers={childLayers}
+                  selectedLayerIds={selectedLayerIds}
+                  onChildSelect={(cid, e) => {
+                    toggleSelection(cid, e.evt.shiftKey);
+                  }}
+                  onChildChange={(cid, u) => updateLayer(cid, u, true)}
+                  onSelect={(e) => {
+                    e.cancelBubble = true;
+                    if (layer.selectable === false) return;
+                    const isMulti = e.evt.shiftKey;
+                    toggleSelection(layer.id, isMulti);
+                  }}
+                  onChange={(updates) => {
                     updateLayer(layer.id, updates, true);
-                  }
-                }}
-                onDragMove={handleDragMove}
-                onDragEnd={handleDragEnd}
-                onDoubleClick={() => {
-                  if (layer.type === 'text') {
-                    handleTextDoubleClick(layer as TextLayer);
-                  }
-                }}
-              />
-            );
-          })}
+                  }}
+                  onDragMove={handleDragMove}
+                  onDragEnd={handleDragEnd}
+                  onDoubleClick={() => {
+                    if (layer.type === 'text') {
+                      handleTextDoubleClick(layer as TextLayer);
+                    }
+                  }}
+                />
+              );
+            });
+          })()}
 
           {/* Dynamic Smart Alignment Guidelines */}
           {guidelines.map((guide, idx) => (

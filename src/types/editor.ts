@@ -174,6 +174,8 @@ export interface BadgeLayer extends BaseLayer {
 export interface GroupLayer extends BaseLayer {
   type: 'group';
   layerIds: string[]; // IDs of member layers in the group
+  originX?: number; // world X of group's top-left at creation (children render at child.x - originX)
+  originY?: number; // world Y of group's top-left at creation (children render at child.y - originY)
 }
 
 export type CanvasLayer = TextLayer | ImageLayer | ShapeLayer | IconLayer | PathLayer | BadgeLayer | GroupLayer;
