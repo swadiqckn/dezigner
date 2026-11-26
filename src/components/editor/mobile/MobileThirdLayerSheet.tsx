@@ -109,7 +109,7 @@ export default function MobileThirdLayerSheet() {
       case 'edit':
         return 'Edit Text Content';
       case 'font':
-        return 'Font Family';
+        return 'Font & Weight';
       case 'size':
         return 'Size & Dimensions';
       case 'color':
@@ -242,12 +242,51 @@ export default function MobileThirdLayerSheet() {
             </div>
           )}
 
-          {/* 3. FONT FAMILY (Searchable Google Fonts + Custom Font Upload) */}
+          {/* 3. FONT FAMILY & WEIGHT (Searchable Google Fonts + Custom Font Upload + Weight) */}
           {activeMobileProperty === 'font' && layer && layer.type === 'text' && (
-            <FontSelector
-              value={(layer as TextLayer).fontFamily}
-              onChange={(fontFamily) => handleUpdate({ fontFamily })}
-            />
+            <div className="space-y-4">
+              <FontSelector
+                value={(layer as TextLayer).fontFamily}
+                previewText={(layer as TextLayer).text}
+                onChange={(fontFamily) => handleUpdate({ fontFamily })}
+              />
+
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
+                  Font Weight
+                </span>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { label: 'Light', value: '300' },
+                    { label: 'Regular', value: 'normal' },
+                    { label: 'Medium', value: '500' },
+                    { label: 'SemiBold', value: '600' },
+                    { label: 'Bold', value: 'bold' },
+                    { label: 'ExtraBold', value: '800' },
+                  ].map((w) => {
+                    const current = (layer as TextLayer).fontWeight || 'normal';
+                    const isActive =
+                      current === w.value ||
+                      (w.value === 'normal' && current === '400') ||
+                      (w.value === 'bold' && current === '700');
+                    return (
+                      <button
+                        key={w.value}
+                        type="button"
+                        onClick={() => handleUpdate({ fontWeight: w.value })}
+                        className={`py-1.5 px-2 rounded-xl text-xs font-semibold border transition-all ${
+                          isActive
+                            ? 'bg-purple-600 text-white border-purple-600'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {w.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           )}
 
           {/* 4. SIZE & DIMENSIONS */}
@@ -290,6 +329,26 @@ export default function MobileThirdLayerSheet() {
                         {s}
                       </button>
                     ))}
+                  </div>
+
+                  {/* Font Weight */}
+                  <div className="pt-2 border-t border-slate-200/70 space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                      Font Weight
+                    </label>
+                    <select
+                      value={(layer as TextLayer).fontWeight || 'normal'}
+                      onChange={(e) => handleUpdate({ fontWeight: e.target.value })}
+                      className="w-full text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-xl px-2.5 py-2 outline-none"
+                    >
+                      <option value="300">Light (300)</option>
+                      <option value="normal">Regular (400)</option>
+                      <option value="500">Medium (500)</option>
+                      <option value="600">SemiBold (600)</option>
+                      <option value="bold">Bold (700)</option>
+                      <option value="800">ExtraBold (800)</option>
+                      <option value="900">Black (900)</option>
+                    </select>
                   </div>
                 </div>
               ) : (
