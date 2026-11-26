@@ -16,8 +16,7 @@ import {
   Unlock, 
   Trash2, 
   Copy, 
-  ChevronUp, 
-  ChevronDown,
+  GripVertical,
   ShieldCheck,
   Edit2,
   Folder,
@@ -49,6 +48,8 @@ export default function LayersPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const componentInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -205,6 +206,36 @@ export default function LayersPanel() {
             return (
               <div
                 key={layer.id}
+                draggable={!isEditing}
+                onDragStart={(e) => {
+                  setDraggedLayerId(layer.id);
+                  e.dataTransfer.effectAllowed = 'move';
+                  e.dataTransfer.setData('text/plain', layer.id);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  if (draggedLayerId && draggedLayerId !== layer.id) {
+                    setDragOverId(layer.id);
+                  }
+                }}
+                onDragLeave={() => {
+                  if (dragOverId === layer.id) setDragOverId(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const sourceId = draggedLayerId || e.dataTransfer.getData('text/plain');
+                  if (sourceId && sourceId !== layer.id) {
+                    const targetStoreIndex = layers.length - 1 - index;
+                    moveLayerToIndex(sourceId, targetStoreIndex);
+                  }
+                  setDraggedLayerId(null);
+                  setDragOverId(null);
+                }}
+                onDragEnd={() => {
+                  setDraggedLayerId(null);
+                  setDragOverId(null);
+                }}
                 onPointerDown={() => {
                   if (layer.selectable === false) return;
                   longPressTimerRef.current = setTimeout(() => {
@@ -230,14 +261,17 @@ export default function LayersPanel() {
                     toggleSelection(layer.id, multiSelectMode || e.shiftKey || e.ctrlKey || e.metaKey);
                   }
                 }}
-                className={`group px-3 py-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all cursor-pointer ${
-                  isSelected
+                className={`group px-3 py-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all cursor-grab active:cursor-grabbing ${
+                  dragOverId === layer.id
+                    ? 'border-purple-600 bg-purple-100/70 ring-2 ring-purple-300'
+                    : isSelected
                     ? 'bg-purple-50/90 border-purple-500 shadow-xs'
                     : 'bg-white hover:bg-slate-50 border-slate-200'
-                }`}
+                } ${draggedLayerId === layer.id ? 'opacity-50' : ''}`}
               >
-                {/* Left: Type Icon & Editable Layer Name */}
+                {/* Left: Drag Handle, Type Icon & Editable Layer Name */}
                 <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <GripVertical className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
                   {getLayerIcon(layer)}
 
                   {isEditing ? (
@@ -296,28 +330,7 @@ export default function LayersPanel() {
 
                 {/* Right: Quick Actions */}
                 <div className="flex items-center gap-1 shrink-0">
-                  {/* Reorder Buttons */}
                   <div className="opacity-0 group-hover:opacity-100 flex items-center transition-opacity">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        reorderLayer(layer.id, 'forward');
-                      }}
-                      title="Move Up"
-                      className="p-1 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded"
-                    >
-                      <ChevronUp className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        reorderLayer(layer.id, 'backward');
-                      }}
-                      title="Move Down"
-                      className="p-1 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded"
-                    >
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
