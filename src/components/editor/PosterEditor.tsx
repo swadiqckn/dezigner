@@ -18,7 +18,7 @@ import MobileDrawerSheet from './mobile/MobileDrawerSheet';
 import { useEditorStore } from '@/store/useEditorStore';
 import { parseERPConfig } from '@/utils/urlConfigParser';
 import { exportCanvas } from '@/utils/exportUtils';
-import { loadProjectFromCache } from '@/utils/projectCache';
+import { loadProjectFromCache, saveProjectToCache } from '@/utils/projectCache';
 import { parseCSVText, resolveTextParam } from '@/utils/csvUtils';
 import { ShieldCheck, X } from 'lucide-react';
 
@@ -219,6 +219,16 @@ export default function PosterEditor() {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [stageInstance, loadFromConfig, loadWorkFile, applyTemplateValues, setBulkRows, enterBulkPreview]);
+
+  // Auto-save to browser cache every 1 minute (60,000 ms)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const state = useEditorStore.getState();
+      if (state.bulkActiveIndex !== null) return;
+      saveProjectToCache(state.getWorkFile());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-white select-none">

@@ -54,6 +54,15 @@ export interface TemplateLayerVariable {
   value: string;
 }
 
+export interface TextWordStyle {
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: string;
+  fontStyle?: 'normal' | 'italic';
+  textDecoration?: 'none' | 'underline' | 'line-through';
+  color?: string;
+}
+
 export interface TextLayer extends BaseLayer {
   type: 'text';
   text: string;
@@ -74,8 +83,9 @@ export interface TextLayer extends BaseLayer {
   shadowOffsetX?: number;
   shadowOffsetY?: number;
   shadowOpacity?: number;
-  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize' | 'camelcase';
   autoWidth?: boolean; // if true, text stays on single line until manual newline
+  wordStyles?: Record<number, TextWordStyle>; // per-word styling keyed by non-whitespace word index
 }
 
 export interface ImageLayer extends BaseLayer {
@@ -85,6 +95,7 @@ export interface ImageLayer extends BaseLayer {
   naturalHeight?: number;
   fit?: 'cover' | 'contain' | 'fill';
   cornerRadius?: number;
+  cornerRadii?: [number, number, number, number]; // [tl, tr, br, bl]
   stroke?: string;
   strokeWidth?: number;
   shadowColor?: string;
@@ -107,8 +118,11 @@ export interface ShapeLayer extends BaseLayer {
   stroke?: string;
   strokeWidth?: number;
   cornerRadius?: number; // for rect
+  cornerRadii?: [number, number, number, number]; // [tl, tr, br, bl]
   dash?: number[]; // dashed lines/borders
   points?: number[]; // for line / polygon
+  sides?: number; // for regular polygon (3 = triangle, 5 = pentagon, 6 = hexagon, etc.)
+  shapeVariant?: string; // 'triangle' | 'pentagon' | 'hexagon' | 'octagon' | 'diamond' | 'arrow' | 'heart' | 'cross' | 'pill'
   numPoints?: number; // for star
   innerRadius?: number; // for star
   outerRadius?: number; // for star

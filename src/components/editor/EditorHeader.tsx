@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useEditorStore } from '@/store/useEditorStore';
 import { CANVAS_PRESETS } from '@/constants/canvasPresets';
 import { saveProjectToCache } from '@/utils/projectCache';
+import CreateNewModal from './modals/CreateNewModal';
 import {
   Undo2,
   Redo2,
@@ -20,6 +21,7 @@ import {
   FolderOpen,
   Braces,
   Check,
+  FilePlus2,
 } from 'lucide-react';
 
 export default function EditorHeader() {
@@ -52,6 +54,7 @@ export default function EditorHeader() {
   const [customW, setCustomW] = useState(width);
   const [customH, setCustomH] = useState(height);
   const [justSaved, setJustSaved] = useState(false);
+  const [isCreateNewOpen, setIsCreateNewOpen] = useState(false);
   const workFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleSaveToCache = async () => {
@@ -289,6 +292,14 @@ export default function EditorHeader() {
         {/* Desktop Work File Controls */}
         <div className="hidden md:flex items-center gap-1 border-r border-slate-200 pr-2">
           <button
+            onClick={() => setIsCreateNewOpen(true)}
+            className="flex items-center gap-1 px-2.5 py-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl text-xs font-semibold transition-colors"
+            title="Create New Poster"
+          >
+            <FilePlus2 className="w-3.5 h-3.5 text-purple-600" />
+            <span>New</span>
+          </button>
+          <button
             onClick={() => workFileInputRef.current?.click()}
             className="flex items-center gap-1 px-2.5 py-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl text-xs font-semibold transition-colors"
             title="Open Work File (.dezign)"
@@ -437,6 +448,8 @@ export default function EditorHeader() {
           <span className="hidden sm:inline">Export</span>
         </button>
       </div>
+      {/* Create New Project Modal */}
+      <CreateNewModal isOpen={isCreateNewOpen} onClose={() => setIsCreateNewOpen(false)} />
     </header>
   );
 }

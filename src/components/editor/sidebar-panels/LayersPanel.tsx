@@ -48,6 +48,8 @@ export default function LayersPanel() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const componentInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleExportComponent = (targetIds?: string[], customName?: string) => {
@@ -151,6 +153,18 @@ export default function LayersPanel() {
             </button>
           )}
 
+          <button
+            onClick={() => setMultiSelectMode((m) => !m)}
+            className={`flex items-center gap-1 px-2 py-1 border rounded-lg text-[10px] font-bold transition-colors ${
+              multiSelectMode
+                ? 'bg-purple-600 text-white border-purple-600'
+                : 'bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-700 border-slate-200'
+            }`}
+            title="Toggle Multi-Select Mode (or long-press a layer on mobile)"
+          >
+            <span>{multiSelectMode ? 'Multi: ON' : 'Multi-Select'}</span>
+          </button>
+
           {selectedLayerIds.length >= 2 && (
             <button
               onClick={() => groupSelectedLayers()}
@@ -191,9 +205,29 @@ export default function LayersPanel() {
             return (
               <div
                 key={layer.id}
+                onPointerDown={() => {
+                  if (layer.selectable === false) return;
+                  longPressTimerRef.current = setTimeout(() => {
+                    setMultiSelectMode(true);
+                    toggleSelection(layer.id, true);
+                    longPressTimerRef.current = null;
+                  }, 450);
+                }}
+                onPointerUp={() => {
+                  if (longPressTimerRef.current) {
+                    clearTimeout(longPressTimerRef.current);
+                    longPressTimerRef.current = null;
+                  }
+                }}
+                onPointerLeave={() => {
+                  if (longPressTimerRef.current) {
+                    clearTimeout(longPressTimerRef.current);
+                    longPressTimerRef.current = null;
+                  }
+                }}
                 onClick={(e) => {
                   if (layer.selectable !== false) {
-                    toggleSelection(layer.id, e.shiftKey || e.ctrlKey || e.metaKey);
+                    toggleSelection(layer.id, multiSelectMode || e.shiftKey || e.ctrlKey || e.metaKey);
                   }
                 }}
                 className={`group px-3 py-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all cursor-pointer ${

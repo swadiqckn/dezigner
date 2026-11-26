@@ -10,6 +10,7 @@ import {
   Circle as KonvaCircle, 
   Line as KonvaLine, 
   Star as KonvaStar, 
+  RegularPolygon as KonvaRegularPolygon,
   Group as KonvaGroup,
   Path as KonvaPath
 } from 'react-konva';
@@ -115,7 +116,7 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
             fill={(layer as ShapeLayer).fill}
             stroke={(layer as ShapeLayer).stroke}
             strokeWidth={(layer as ShapeLayer).strokeWidth || 0}
-            cornerRadius={(layer as ShapeLayer).cornerRadius || 0}
+            cornerRadius={(layer as ShapeLayer).cornerRadii || (layer as ShapeLayer).cornerRadius || 0}
             dash={(layer as ShapeLayer).dash}
             rotation={layer.rotation || 0}
             opacity={layer.opacity ?? 1}
@@ -181,6 +182,68 @@ export const CanvasLayerItem = React.forwardRef<Konva.Node, CanvasLayerItemProps
             strokeWidth={shape.strokeWidth || 0}
             rotation={layer.rotation || 0}
             opacity={layer.opacity ?? 1}
+            draggable={isDraggable}
+            onClick={onSelect}
+            onTap={onSelect}
+            onTransformEnd={handleTransformEnd}
+            onDragMove={onDragMove}
+            onDragEnd={handleDragEndInternal}
+          />
+        );
+      }
+
+      case 'polygon': {
+        const shape = layer as ShapeLayer;
+        const variant = shape.shapeVariant;
+        if (variant === 'arrow' || variant === 'heart' || variant === 'cross') {
+          const pathMap: Record<string, string> = {
+            arrow: 'M 0 35 L 60 35 L 60 15 L 100 50 L 60 85 L 60 65 L 0 65 Z',
+            heart: 'M 50 90 C 20 70 0 50 0 28 C 0 12 13 0 28 0 C 38 0 46 6 50 14 C 54 6 62 0 72 0 C 87 0 100 12 100 28 C 100 50 80 70 50 90 Z',
+            cross: 'M 35 0 L 65 0 L 65 35 L 100 35 L 100 65 L 65 65 L 65 100 L 35 100 L 35 65 L 0 65 L 0 35 L 35 35 Z',
+          };
+          const h = layer.height || layer.width;
+          return (
+            <KonvaPath
+              ref={ref as React.Ref<Konva.Path>}
+              id={layer.id}
+              name={layer.id}
+              x={layer.x}
+              y={layer.y}
+              data={pathMap[variant]}
+              scaleX={(layer.width / 100) * (layer.scaleX ?? 1)}
+              scaleY={(h / 100) * (layer.scaleY ?? 1)}
+              fill={shape.fill}
+              stroke={shape.stroke}
+              strokeWidth={shape.strokeWidth || 0}
+              rotation={layer.rotation || 0}
+              opacity={layer.opacity ?? 1}
+              draggable={isDraggable}
+              onClick={onSelect}
+              onTap={onSelect}
+              onTransformEnd={handleTransformEnd}
+              onDragMove={onDragMove}
+              onDragEnd={handleDragEndInternal}
+            />
+          );
+        }
+
+        const radius = Math.min(layer.width, layer.height || layer.width) / 2;
+        return (
+          <KonvaRegularPolygon
+            ref={ref as React.Ref<Konva.RegularPolygon>}
+            id={layer.id}
+            name={layer.id}
+            x={layer.x + radius}
+            y={layer.y + radius}
+            sides={shape.sides || 3}
+            radius={radius}
+            fill={shape.fill}
+            stroke={shape.stroke}
+            strokeWidth={shape.strokeWidth || 0}
+            rotation={layer.rotation || 0}
+            opacity={layer.opacity ?? 1}
+            shadowColor={shape.shadowColor}
+            shadowBlur={shape.shadowBlur}
             draggable={isDraggable}
             onClick={onSelect}
             onTap={onSelect}
@@ -369,6 +432,152 @@ const RenderTextLayer = React.forwardRef<
   const { width: textWidth, height: textHeight } = getLayerDimensions(layer);
   const offset = getOffsetForAnchor(layer.anchor, textWidth, textHeight);
 
+  // Check if any per-word styles are active
+  const hasWordStyles = Boolean(layer.wordStyles && Object.keys(layer.wordStyles).length > 0);
+
+  if (hasWordStyles) {
+    // Render multi-styled words inside a KonvaGroup
+    const lines = (layer.text || '').split('\n');
+    const lineHeightPx = layer.fontSize * (layer.lineHeight || 1.2);
+    const letterSpacing = layer.letterSpacing || 0;
+    const measureCtx =
+      typeof document !== 'undefined' ? document.createElement('canvas').getContext('2d') : null;
+
+    let globalWordIndex = 0;
+    const renderedWords: Array<{
+      key: string;
+      text: string;
+      x: number;
+      y: number;
+      fontFamily: string;
+      fontSize: number;
+      fontStyle: string;
+      textDecoration: string;
+      fill: string;
+    }> = [];
+
+    lines.forEach((lineStr, lineIdx) => {
+      const tokens = lineStr.split(/(\s+)/).filter((t) => t.length > 0);
+      const lineItems: Array<{
+        wordIdx: number | null;
+        token: string;
+        width: number;
+        fontFamily: string;
+        fontSize: number;
+        fontStyle: string;
+        textDecoration: string;
+        fill: string;
+      }> = [];
+
+      let totalLineW = 0;
+      tokens.forEach((token) => {
+        const isSpace = /^\s+$/.test(token);
+        const wIdx = isSpace ? null : globalWordIndex++;
+        const ws = wIdx !== null ? layer.wordStyles?.[wIdx] : undefined;
+
+        const wFamily = ws?.fontFamily || layer.fontFamily;
+        const wSize = ws?.fontSize || layer.fontSize;
+        const wWeight = ws?.fontWeight || layer.fontWeight || 'normal';
+        const wItalic = ws?.fontStyle || layer.fontStyle || 'normal';
+        const wFontStyle = wItalic === 'italic' ? `${wWeight} italic` : `${wWeight}`;
+        const wDecor = ws?.textDecoration || layer.textDecoration || 'none';
+        const wColor = ws?.color || layer.color;
+
+        let measuredW = token.length * wSize * 0.55;
+        if (measureCtx) {
+          measureCtx.font = `${wItalic === 'italic' ? 'italic ' : ''}${wWeight} ${wSize}px '${wFamily}', sans-serif`;
+          measuredW = measureCtx.measureText(token).width + Math.max(0, token.length - 1) * letterSpacing;
+        }
+
+        lineItems.push({
+          wordIdx: wIdx,
+          token,
+          width: measuredW,
+          fontFamily: wFamily,
+          fontSize: wSize,
+          fontStyle: wFontStyle,
+          textDecoration: wDecor,
+          fill: wColor,
+        });
+        totalLineW += measuredW;
+      });
+
+      let startX = 0;
+      if (layer.textAlign === 'center') {
+        startX = Math.max(0, (textWidth - totalLineW) / 2);
+      } else if (layer.textAlign === 'right') {
+        startX = Math.max(0, textWidth - totalLineW);
+      }
+
+      let curX = startX;
+      lineItems.forEach((item, tIdx) => {
+        if (item.wordIdx !== null) {
+          renderedWords.push({
+            key: `${lineIdx}-${tIdx}-${item.wordIdx}`,
+            text: item.token,
+            x: curX,
+            y: lineIdx * lineHeightPx,
+            fontFamily: item.fontFamily,
+            fontSize: item.fontSize,
+            fontStyle: item.fontStyle,
+            textDecoration: item.textDecoration,
+            fill: item.fill,
+          });
+        }
+        curX += item.width;
+      });
+    });
+
+    return (
+      <KonvaGroup
+        ref={ref as unknown as React.Ref<Konva.Group>}
+        id={layer.id}
+        name={layer.id}
+        x={layer.x}
+        y={layer.y}
+        width={textWidth}
+        height={textHeight}
+        offsetX={offset.x}
+        offsetY={offset.y}
+        scaleX={layer.scaleX ?? 1}
+        scaleY={layer.scaleY ?? 1}
+        rotation={layer.rotation || 0}
+        opacity={layer.opacity ?? 1}
+        draggable={isDraggable}
+        onClick={onSelect}
+        onTap={onSelect}
+        onDblClick={onDblClick}
+        onTransformEnd={onTransformEnd}
+        onDragMove={onDragMove}
+        onDragEnd={onDragEnd}
+      >
+        {renderedWords.map((w) => (
+          <KonvaText
+            key={w.key}
+            text={w.text}
+            x={w.x}
+            y={w.y}
+            fontSize={w.fontSize}
+            fontFamily={w.fontFamily}
+            fontStyle={w.fontStyle}
+            textDecoration={w.textDecoration}
+            letterSpacing={letterSpacing}
+            fill={w.fill}
+            stroke={layer.stroke}
+            strokeWidth={layer.strokeWidth || 0}
+            shadowColor={layer.shadowColor}
+            shadowBlur={layer.shadowBlur}
+            shadowOffset={{
+              x: layer.shadowOffsetX || 0,
+              y: layer.shadowOffsetY || 0,
+            }}
+            shadowOpacity={layer.shadowOpacity}
+          />
+        ))}
+      </KonvaGroup>
+    );
+  }
+
   return (
     <KonvaText
       ref={ref}
@@ -507,7 +716,7 @@ const RenderImageLayer = React.forwardRef<
       scaleY={layer.scaleY ?? 1}
       rotation={layer.rotation || 0}
       opacity={layer.opacity ?? 1}
-      cornerRadius={layer.cornerRadius || 0}
+      cornerRadius={layer.cornerRadii || layer.cornerRadius || 0}
       stroke={layer.stroke}
       strokeWidth={layer.strokeWidth || 0}
       shadowEnabled={Boolean(layer.shadowColor && layer.shadowColor !== 'transparent')}

@@ -127,7 +127,12 @@ interface EditorState {
   zoomOut: () => void;
 
   // Alignment helpers
-  alignSelected: (type: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => void;
+  alignSelected: (type: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom', alignTo?: 'canvas' | 'selection') => void;
+  moveLayersDelta: (ids: string[], dx: number, dy: number, pushToHistory?: boolean) => void;
+
+  // Recent Colors (most recent first)
+  recentColors: string[];
+  recordRecentColor: (hex: string) => void;
 
   // Clipboard
   copySelected: () => void;
@@ -142,6 +147,7 @@ interface EditorState {
   loadTemplate: (template: PosterTemplate) => void;
   loadFromConfig: (config: ERPExternalConfig) => void;
   resetCanvas: () => void;
+  createNewProject: (opts: { title: string; width: number; height: number; presetName?: string; background: CanvasBackground }) => void;
   loadWorkFile: (file: ProjectWorkFile) => void;
   getWorkFile: () => ProjectWorkFile;
   exportComponentFile: (layerIds?: string[], componentName?: string) => DesignComponentFile | null;
@@ -241,6 +247,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     bulkBaseLayers: null,
     bulkOverrides: {},
     customFonts: [],
+    recentColors: [],
 
     erpMeta: undefined,
 
@@ -561,20 +568,65 @@ export const useEditorStore = create<EditorState>((set, get) => {
       set((state) => ({ zoom: Math.max(0.1, Number((state.zoom - 0.1).toFixed(2))) }));
     },
 
-    alignSelected: (type) => {
+    recordRecentColor: (hex) => {
+      if (!hex || typeof hex !== 'string') return;
+      const normalized = hex.trim().toUpperCase();
+      if (!/^#[0-9A-F]{6}$/.test(normalized)) return;
+      set((state) => {
+        const filtered = state.recentColors.filter((c) => c.toUpperCase() !== normalized);
+        return { recentColors: [normalized, ...filtered].slice(0, 20) };
+      });
+    },
+
+    moveLayersDelta: (ids, dx, dy, pushToHistory = false) => {
+      if (ids.length === 0 || (dx === 0 && dy === 0)) return;
+      if (pushToHistory) pushSnapshot();
+      set((state) => {
+        const expandIds = new Set<string>(ids);
+        state.layers.forEach((l) => {
+          if (expandIds.has(l.id) && l.type === 'group' && Array.isArray((l as GroupLayer).layerIds)) {
+            (l as GroupLayer).layerIds.forEach((cid) => expandIds.add(cid));
+          }
+        });
+        return {
+          layers: state.layers.map((l) =>
+            expandIds.has(l.id) ? ({ ...l, x: l.x + dx, y: l.y + dy } as CanvasLayer) : l
+          ),
+        };
+      });
+    },
+
+    alignSelected: (type, alignTo) => {
       const { layers, selectedLayerIds, width, height } = get();
       if (selectedLayerIds.length === 0) return;
       pushSnapshot();
 
       const selectedLayers = layers.filter((l) => selectedLayerIds.includes(l.id));
+      const mode = alignTo || (selectedLayers.length === 1 ? 'canvas' : 'selection');
 
-      if (selectedLayers.length === 1) {
-        // Align relative to canvas respecting anchor point and scale
-        const item = selectedLayers[0];
-        const { x: newX, y: newY } = getAlignedPosition(item, width, height, type);
+      if (mode === 'canvas') {
+        // Align relative to canvas respecting anchor point and scale; if a group is aligned, move its children by the same delta
+        const updateMap = new Map<string, { x: number; y: number }>();
+        selectedLayers.forEach((item) => {
+          const { x: newX, y: newY } = getAlignedPosition(item, width, height, type);
+          updateMap.set(item.id, { x: newX, y: newY });
+          if (item.type === 'group' && Array.isArray((item as GroupLayer).layerIds)) {
+            const dx = newX - item.x;
+            const dy = newY - item.y;
+            (item as GroupLayer).layerIds.forEach((cid) => {
+              const child = layers.find((l) => l.id === cid);
+              if (child) {
+                updateMap.set(cid, { x: child.x + dx, y: child.y + dy });
+              }
+            });
+          }
+        });
 
         set((state) => ({
-          layers: state.layers.map((l) => (l.id === item.id ? { ...l, x: newX, y: newY } : l)),
+          layers: state.layers.map((l) => {
+            const up = updateMap.get(l.id);
+            return up ? ({ ...l, ...up } as CanvasLayer) : l;
+          }),
         }));
       } else {
         // Align relative to bounding box of selection
@@ -591,7 +643,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
           maxY = Math.max(maxY, l.y + lHeight);
         });
 
-        const updates = selectedLayers.map((l) => {
+        const updateMap = new Map<string, { x: number; y: number }>();
+        selectedLayers.forEach((l) => {
           const lHeight = l.height || ((l as any).fontSize ? (l as any).fontSize * 1.3 : 50);
           let nx = l.x;
           let ny = l.y;
@@ -601,10 +654,19 @@ export const useEditorStore = create<EditorState>((set, get) => {
           if (type === 'top') ny = minY;
           if (type === 'middle') ny = minY + (maxY - minY - lHeight) / 2;
           if (type === 'bottom') ny = maxY - lHeight;
-          return { id: l.id, updates: { x: nx, y: ny } };
+          updateMap.set(l.id, { x: nx, y: ny });
+          if (l.type === 'group' && Array.isArray((l as GroupLayer).layerIds)) {
+            const dx = nx - l.x;
+            const dy = ny - l.y;
+            (l as GroupLayer).layerIds.forEach((cid) => {
+              const child = layers.find((c) => c.id === cid);
+              if (child) {
+                updateMap.set(cid, { x: child.x + dx, y: child.y + dy });
+              }
+            });
+          }
         });
 
-        const updateMap = new Map(updates.map((u) => [u.id, u.updates]));
         set((state) => ({
           layers: state.layers.map((l) => {
             const up = updateMap.get(l.id);
@@ -738,6 +800,24 @@ export const useEditorStore = create<EditorState>((set, get) => {
         layers: [],
         selectedLayerIds: [],
       });
+    },
+
+    createNewProject: ({ title, width, height, presetName = "Custom", background }) => {
+      pushSnapshot();
+      set({
+        title: title.trim() || "Untitled Poster",
+        width,
+        height,
+        presetName,
+        background,
+        layers: [],
+        selectedLayerIds: [],
+        bulkRows: [],
+        bulkActiveIndex: null,
+        bulkBaseLayers: null,
+        bulkOverrides: {},
+      });
+      get().resetZoomPan();
     },
 
     addCustomFont: (font) => {

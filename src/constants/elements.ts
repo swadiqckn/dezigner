@@ -6,6 +6,8 @@ export interface ShapePreset {
   stroke?: string;
   strokeWidth?: number;
   cornerRadius?: number;
+  sides?: number;
+  shapeVariant?: string;
   width: number;
   height: number;
   badgeStyle?: 'ribbon' | 'circle-star' | 'tag' | 'pill' | 'banner';
@@ -15,6 +17,14 @@ export const SHAPE_PRESETS: ShapePreset[] = [
   { id: 'rect-flat', name: 'Rectangle', type: 'rect', fill: '#39216C', width: 300, height: 200, cornerRadius: 0 },
   { id: 'rect-rounded', name: 'Rounded Card', type: 'rect', fill: '#7C3AED', width: 300, height: 200, cornerRadius: 24 },
   { id: 'circle-flat', name: 'Circle', type: 'circle', fill: '#EC4899', width: 250, height: 250 },
+  { id: 'triangle', name: 'Triangle', type: 'polygon', sides: 3, shapeVariant: 'triangle', fill: '#F59E0B', width: 220, height: 220 },
+  { id: 'diamond', name: 'Diamond', type: 'polygon', sides: 4, shapeVariant: 'diamond', fill: '#06B6D4', width: 220, height: 220 },
+  { id: 'pentagon', name: 'Pentagon', type: 'polygon', sides: 5, shapeVariant: 'pentagon', fill: '#10B981', width: 220, height: 220 },
+  { id: 'hexagon', name: 'Hexagon', type: 'polygon', sides: 6, shapeVariant: 'hexagon', fill: '#3B82F6', width: 220, height: 220 },
+  { id: 'octagon', name: 'Octagon', type: 'polygon', sides: 8, shapeVariant: 'octagon', fill: '#8B5CF6', width: 220, height: 220 },
+  { id: 'arrow-right', name: 'Arrow', type: 'polygon', shapeVariant: 'arrow', fill: '#0F172A', width: 240, height: 180 },
+  { id: 'heart-shape', name: 'Heart', type: 'polygon', shapeVariant: 'heart', fill: '#E11D48', width: 220, height: 200 },
+  { id: 'cross-plus', name: 'Cross', type: 'polygon', shapeVariant: 'cross', fill: '#14B8A6', width: 200, height: 200 },
   { id: 'pill-button', name: 'Pill Frame', type: 'rect', fill: '#6366F1', width: 320, height: 80, cornerRadius: 40 },
   { id: 'border-frame', name: 'Outline Frame', type: 'rect', fill: 'transparent', stroke: '#1E293B', strokeWidth: 8, width: 400, height: 500, cornerRadius: 16 },
   { id: 'star-5', name: '5-Point Star', type: 'star', fill: '#F59E0B', width: 200, height: 200 },

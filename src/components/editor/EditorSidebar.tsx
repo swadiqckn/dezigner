@@ -50,7 +50,7 @@ export default function EditorSidebar() {
   return (
     <aside className="hidden md:flex h-full border-r border-slate-200 select-none z-10 shrink-0">
       {/* Mini Icon Strip (Desktop) */}
-      <div className="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-3 space-y-1.5 shrink-0">
+      <div className="w-14 bg-white border-r border-slate-200 flex flex-col items-center py-3 space-y-2 shrink-0">
         {SIDEBAR_TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id && isDrawerOpen;
@@ -59,25 +59,24 @@ export default function EditorSidebar() {
             <button
               key={tab.id}
               onClick={() => handleTabClick(tab.id)}
-              className={`w-13 py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all relative ${
+              title={tab.label}
+              aria-label={tab.label}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all relative ${
                 isActive
-                  ? 'bg-purple-50 text-purple-700 font-bold'
-                  : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                  ? 'bg-purple-50 text-purple-700 font-bold shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
               }`}
             >
               <Icon className={`w-5 h-5 ${isActive ? 'text-purple-600' : 'text-slate-500'}`} />
-              <span className="text-[10px] leading-tight truncate w-full text-center">
-                {tab.label}
-              </span>
 
               {tab.badge && (
-                <span className="absolute top-1 right-0.5 text-[8px] bg-purple-600 text-white font-extrabold px-1 rounded-full">
+                <span className="absolute -top-0.5 -right-0.5 text-[7px] bg-purple-600 text-white font-extrabold px-1 rounded-full leading-tight">
                   {tab.badge}
                 </span>
               )}
 
               {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-purple-600 rounded-r-md" />
+                <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-6 bg-purple-600 rounded-r-md" />
               )}
             </button>
           );

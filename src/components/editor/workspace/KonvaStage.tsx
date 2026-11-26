@@ -20,6 +20,12 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
   const stageRef = useRef<Konva.Stage | null>(null);
   const layerRef = useRef<Konva.Layer | null>(null);
   const trRef = useRef<Konva.Transformer | null>(null);
+  const groupDragOriginRef = useRef<{
+    groupId: string;
+    groupX: number;
+    groupY: number;
+    children: Record<string, { x: number; y: number }>;
+  } | null>(null);
 
   const {
     width,
@@ -108,8 +114,38 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
 
   const handleDragMove = useCallback(
     (e: Konva.KonvaEventObject<DragEvent>) => {
-      if (!showGuides) return;
       const target = e.target;
+      const draggedId = target.id();
+      const draggedLayer = layers.find((l) => l.id === draggedId);
+
+      // Real-time child movement preview when dragging a Group layer
+      if (draggedLayer && draggedLayer.type === 'group' && stageRef.current) {
+        if (!groupDragOriginRef.current || groupDragOriginRef.current.groupId !== draggedId) {
+          const childOrigins: Record<string, { x: number; y: number }> = {};
+          ((draggedLayer as GroupLayer).layerIds || []).forEach((cid) => {
+            const c = layers.find((l) => l.id === cid);
+            if (c) childOrigins[cid] = { x: c.x, y: c.y };
+          });
+          groupDragOriginRef.current = {
+            groupId: draggedId,
+            groupX: draggedLayer.x,
+            groupY: draggedLayer.y,
+            children: childOrigins,
+          };
+        }
+        const origin = groupDragOriginRef.current;
+        const dx = target.x() - origin.groupX;
+        const dy = target.y() - origin.groupY;
+        Object.entries(origin.children).forEach(([cid, pos]) => {
+          const childNode = stageRef.current?.findOne(`#${cid}`);
+          if (childNode) {
+            childNode.x(pos.x + dx);
+            childNode.y(pos.y + dy);
+          }
+        });
+      }
+
+      if (!showGuides) return;
       const guideStops = getLineGuideStops(target.id());
       const targetBox = {
         x: target.x(),
@@ -161,6 +197,7 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
   );
 
   const handleDragEnd = useCallback(() => {
+    groupDragOriginRef.current = null;
     setGuidelines([]);
     commitSnapshot();
   }, [commitSnapshot]);
@@ -210,18 +247,19 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
       } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
         e.preventDefault();
         const delta = e.shiftKey ? 10 : 1;
-        selectedLayerIds.forEach((id) => {
+        let dx = 0;
+        let dy = 0;
+        if (e.key === 'ArrowUp') dy = -delta;
+        if (e.key === 'ArrowDown') dy = delta;
+        if (e.key === 'ArrowLeft') dx = -delta;
+        if (e.key === 'ArrowRight') dx = delta;
+        const unlockedIds = selectedLayerIds.filter((id) => {
           const l = layers.find((layer) => layer.id === id);
-          if (l && !l.locked) {
-            let dx = 0;
-            let dy = 0;
-            if (e.key === 'ArrowUp') dy = -delta;
-            if (e.key === 'ArrowDown') dy = delta;
-            if (e.key === 'ArrowLeft') dx = -delta;
-            if (e.key === 'ArrowRight') dx = delta;
-            updateLayer(id, { x: l.x + dx, y: l.y + dy });
-          }
+          return l && !l.locked;
         });
+        if (unlockedIds.length > 0) {
+          useEditorStore.getState().moveLayersDelta(unlockedIds, dx, dy, false);
+        }
       }
     };
 
@@ -354,15 +392,54 @@ export default function KonvaStage({ onStageReady }: KonvaStageProps) {
                   toggleSelection(layer.id, isMulti);
                 }}
                 onChange={(updates) => {
-                  if (layer.type === 'group' && (updates.x !== undefined || updates.y !== undefined)) {
-                    const dx = (updates.x ?? layer.x) - layer.x;
-                    const dy = (updates.y ?? layer.y) - layer.y;
+                  if (layer.type === 'group') {
                     const childIds = (layer as GroupLayer).layerIds || [];
+                    const dx = updates.x !== undefined ? updates.x - layer.x : 0;
+                    const dy = updates.y !== undefined ? updates.y - layer.y : 0;
+                    const dRot = updates.rotation !== undefined ? updates.rotation - (layer.rotation || 0) : 0;
+                    const sxRatio =
+                      updates.width !== undefined && layer.width
+                        ? updates.width / layer.width
+                        : updates.scaleX !== undefined
+                        ? updates.scaleX / (layer.scaleX ?? 1)
+                        : 1;
+                    const syRatio =
+                      updates.height !== undefined && layer.height
+                        ? updates.height / layer.height
+                        : updates.scaleY !== undefined
+                        ? updates.scaleY / (layer.scaleY ?? 1)
+                        : 1;
+
                     updateLayer(layer.id, updates, false);
                     childIds.forEach((cid) => {
                       const child = layers.find((l) => l.id === cid);
-                      if (child) {
-                        updateLayer(cid, { x: child.x + dx, y: child.y + dy }, false);
+                      if (!child) return;
+                      const childUpdates: Partial<CanvasLayer> = {};
+                      if (dx !== 0 || dy !== 0) {
+                        childUpdates.x = child.x + dx;
+                        childUpdates.y = child.y + dy;
+                      }
+                      if (updates.opacity !== undefined) {
+                        childUpdates.opacity = updates.opacity;
+                      }
+                      if (sxRatio !== 1 || syRatio !== 1) {
+                        childUpdates.x = Math.round(layer.x + (child.x - layer.x) * sxRatio);
+                        childUpdates.y = Math.round(layer.y + (child.y - layer.y) * syRatio);
+                        childUpdates.width = Math.max(10, Math.round(child.width * sxRatio));
+                        if (child.height) {
+                          childUpdates.height = Math.max(10, Math.round(child.height * syRatio));
+                        }
+                      }
+                      if (dRot !== 0) {
+                        const rad = (dRot * Math.PI) / 180;
+                        const relX = child.x - layer.x;
+                        const relY = child.y - layer.y;
+                        childUpdates.x = Math.round(layer.x + relX * Math.cos(rad) - relY * Math.sin(rad));
+                        childUpdates.y = Math.round(layer.y + relX * Math.sin(rad) + relY * Math.cos(rad));
+                        childUpdates.rotation = Math.round((child.rotation || 0) + dRot);
+                      }
+                      if (Object.keys(childUpdates).length > 0) {
+                        updateLayer(cid, childUpdates, false);
                       }
                     });
                     commitSnapshot();

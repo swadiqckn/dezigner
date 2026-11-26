@@ -226,7 +226,6 @@ export default function MobileSecondRail() {
               title="Edit Content"
             >
               <PenLine className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Edit</span>
             </button>
 
             {/* Font Family */}
@@ -240,7 +239,6 @@ export default function MobileSecondRail() {
               title="Font Family"
             >
               <Type className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Font</span>
             </button>
 
             {/* Font Size */}
@@ -254,7 +252,6 @@ export default function MobileSecondRail() {
               title="Font Size"
             >
               <ArrowUpDown className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Size</span>
             </button>
 
             {/* Color */}
@@ -274,7 +271,6 @@ export default function MobileSecondRail() {
                   style={{ backgroundColor: (primaryLayer as any).color || '#000000' }}
                 />
               </div>
-              <span className="text-[9px] mt-0.5 leading-none">Color</span>
             </button>
 
             {/* Format (Bold, Italic, Align) */}
@@ -288,7 +284,6 @@ export default function MobileSecondRail() {
               title="Format"
             >
               <Bold className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Format</span>
             </button>
 
             {/* Spacing */}
@@ -302,7 +297,6 @@ export default function MobileSecondRail() {
               title="Spacing"
             >
               <MoveHorizontal className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Spacing</span>
             </button>
 
             {/* Rotation */}
@@ -316,7 +310,6 @@ export default function MobileSecondRail() {
               title="Rotate"
             >
               <RotateCw className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Rotate</span>
             </button>
 
             {/* Effects / Shadow */}
@@ -330,7 +323,6 @@ export default function MobileSecondRail() {
               title="Effects"
             >
               <Sparkles className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Effects</span>
             </button>
 
             {/* Move & Nudge Position */}
@@ -344,7 +336,6 @@ export default function MobileSecondRail() {
               title="Move & Nudge"
             >
               <Move className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Move</span>
             </button>
           </>
         )}
@@ -359,7 +350,6 @@ export default function MobileSecondRail() {
               title="Replace Image"
             >
               <Upload className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Replace</span>
             </button>
 
             {/* Size & Dimensions */}
@@ -373,7 +363,6 @@ export default function MobileSecondRail() {
               title="Dimensions & Size"
             >
               <Maximize className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Size</span>
             </button>
 
             {/* Rotation */}
@@ -387,7 +376,6 @@ export default function MobileSecondRail() {
               title="Rotate"
             >
               <RotateCw className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Rotate</span>
             </button>
 
             {/* Corner Radius */}
@@ -401,7 +389,6 @@ export default function MobileSecondRail() {
               title="Corner Radius"
             >
               <Square className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Radius</span>
             </button>
 
             {/* Opacity */}
@@ -415,7 +402,6 @@ export default function MobileSecondRail() {
               title="Opacity"
             >
               <Eye className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Opacity</span>
             </button>
 
             {/* Effects / Alpha Drop Shadow */}
@@ -429,7 +415,6 @@ export default function MobileSecondRail() {
               title="Drop Shadow"
             >
               <Sparkles className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Shadow</span>
             </button>
 
             {/* Move & Nudge Position */}
@@ -443,7 +428,6 @@ export default function MobileSecondRail() {
               title="Move & Nudge"
             >
               <Move className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Move</span>
             </button>
           </>
         )}
@@ -468,7 +452,6 @@ export default function MobileSecondRail() {
                   style={{ backgroundColor: (primaryLayer as any).fill || '#7C3AED' }}
                 />
               </div>
-              <span className="text-[9px] mt-0.5 leading-none">Fill</span>
             </button>
 
             {/* Border / Stroke */}
@@ -482,7 +465,6 @@ export default function MobileSecondRail() {
               title="Border & Stroke"
             >
               <Square className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Border</span>
             </button>
 
             {/* Size */}
@@ -496,7 +478,6 @@ export default function MobileSecondRail() {
               title="Dimensions & Size"
             >
               <Maximize className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Size</span>
             </button>
 
             {/* Rotation */}
@@ -510,7 +491,6 @@ export default function MobileSecondRail() {
               title="Rotate"
             >
               <RotateCw className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Rotate</span>
             </button>
 
             {/* Radius (for rect) */}
@@ -525,7 +505,6 @@ export default function MobileSecondRail() {
                 title="Corner Radius"
               >
                 <Square className="w-4 h-4" />
-                <span className="text-[9px] mt-0.5 leading-none">Radius</span>
               </button>
             )}
 
@@ -540,7 +519,6 @@ export default function MobileSecondRail() {
               title="Opacity"
             >
               <Eye className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Opacity</span>
             </button>
 
             {/* Effects / Alpha Drop Shadow */}
@@ -554,7 +532,6 @@ export default function MobileSecondRail() {
               title="Drop Shadow"
             >
               <Sparkles className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Shadow</span>
             </button>
 
             {/* Move & Nudge Position */}
@@ -568,7 +545,45 @@ export default function MobileSecondRail() {
               title="Move & Nudge"
             >
               <Move className="w-4 h-4" />
-              <span className="text-[9px] mt-0.5 leading-none">Move</span>
+            </button>
+          </>
+        )}
+
+        {/* GROUP LAYER PROPERTY ICONS */}
+        {primaryLayer.type === 'group' && (
+          <>
+            <button
+              onClick={() => toggleProperty('rotate')}
+              className={`p-2 rounded-xl flex items-center justify-center transition-all ${
+                activeMobileProperty === 'rotate'
+                  ? 'bg-purple-100 text-purple-700 shadow-xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+              title="Rotate"
+            >
+              <RotateCw className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => toggleProperty('opacity')}
+              className={`p-2 rounded-xl flex items-center justify-center transition-all ${
+                activeMobileProperty === 'opacity'
+                  ? 'bg-purple-100 text-purple-700 shadow-xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+              title="Opacity"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => toggleProperty('move')}
+              className={`p-2 rounded-xl flex items-center justify-center transition-all ${
+                activeMobileProperty === 'move'
+                  ? 'bg-purple-100 text-purple-700 shadow-xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+              title="Move & Nudge"
+            >
+              <Move className="w-4 h-4" />
             </button>
           </>
         )}
@@ -586,7 +601,6 @@ export default function MobileSecondRail() {
           title="Scale X & Y"
         >
           <Maximize2 className="w-4 h-4" />
-          <span className="text-[9px] mt-0.5 leading-none">Scale</span>
         </button>
 
         {/* ANCHOR POINT */}
@@ -600,7 +614,6 @@ export default function MobileSecondRail() {
           title="Anchor Point"
         >
           <Crosshair className="w-4 h-4" />
-          <span className="text-[9px] mt-0.5 leading-none">Anchor</span>
         </button>
 
         {/* TEMPLATE VARIABLE (Text, Image, Icon only) */}
@@ -615,7 +628,6 @@ export default function MobileSecondRail() {
             title="Template Variable"
           >
             <Braces className="w-4 h-4" />
-            <span className="text-[9px] mt-0.5 leading-none">Template</span>
           </button>
         )}
 
@@ -630,7 +642,6 @@ export default function MobileSecondRail() {
           title="Layer Position & Options"
         >
           <Layers className="w-4 h-4" />
-          <span className="text-[9px] mt-0.5 leading-none">Layers</span>
         </button>
 
         {/* DIRECT LOCK TOGGLE */}
@@ -642,7 +653,6 @@ export default function MobileSecondRail() {
           title={isLocked ? 'Unlock Layer' : 'Lock Layer'}
         >
           {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-          <span className="text-[9px] mt-0.5 leading-none">{isLocked ? 'Locked' : 'Lock'}</span>
         </button>
 
         {/* DIRECT DELETE */}
@@ -653,7 +663,6 @@ export default function MobileSecondRail() {
           title="Delete Layer"
         >
           <Trash2 className="w-4 h-4" />
-          <span className="text-[9px] mt-0.5 leading-none">Delete</span>
         </button>
       </div>
     </div>

@@ -54,14 +54,15 @@ export default function MobileBottomNav() {
           <button
             key={tab.id}
             onClick={() => handleTabClick(tab.id)}
-            className={`flex-1 flex flex-col items-center justify-center py-1 transition-colors ${
+            title={tab.label}
+            aria-label={tab.label}
+            className={`flex-1 flex items-center justify-center py-2 transition-colors ${
               isActive ? 'text-purple-600 font-bold' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            <div className={`p-1 rounded-xl transition-colors ${isActive ? 'bg-purple-100' : ''}`}>
-              <Icon className="w-4 h-4" />
+            <div className={`p-2 rounded-xl transition-colors ${isActive ? 'bg-purple-100' : ''}`}>
+              <Icon className="w-5 h-5" />
             </div>
-            <span className="text-[10px] leading-tight mt-0.5">{tab.label}</span>
           </button>
         );
       })}
